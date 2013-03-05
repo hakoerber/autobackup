@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?> 
+<config>
+	<hosts>
+		<host id="1">
+			<ip>192.168.1.1</ip>
+			<user>hannes</user>
+		</host>
+		<host id="2">
+			<hostname>mint-vb</hostname>
+			<user>hannes</user>
+		</host>
+	</hosts>
+	<devices>
+		<device id="2">
+			<name>hdd</name>
+			<uuid>c3a1cc6b-56f4-4822-a768-bd7d11ad0663</uuid>
+			<filesystem>ext4</filesystem>
+			<host>1</host>
+		</device>
+	</devices>
+	<mountpoints>
+		<mountpoint id="3">
+			<path>/home/hannes/mount</path>
+			<create>true</create>
+			<host>2</host>
+		</mountpoint>
+	</mountpoints>
+	<backups>
+		<backup>
+			<source>
+				<host>1</host>
+				<device>2</device>
+				<mountpoint>3</mountpoint> 
+				<subdirectory>subdir</subdirectory> 
+			</source>
+			<destination>
+				<host>1</host>
+				<directory>/var/backup</directory> 
+				<directoryCreate>false</directoryCreate>
+			</destination>
+			<interval></interval>
+			<expirationInterval></expirationInterval>
+			<expirationCount></expirationCount>
+		</backup>
+		<backup>
+			<source>
+				<host>1</host>
+				<directory></directory> 
+			</source>
+			<destination>
+				<host>1</host>
+				<device>2</device>
+				<mountpoint>3</mountpoint>
+				<subdirectory>subdir</subdirectory>
+				<subdirectoryCreate>true</subdirectoryCreate> 
+			</destination>
+			<interval>P10D</interval>
+			<expirationInterval>P1Y</expirationInterval>
+			<expirationCount>20</expirationCount>
+		</backup>
+	</backups>
+	
+	<rsync>
+		<args>--verbose</args>
+		<args>--arg</args>
+	</rsync>
+	
+</config>

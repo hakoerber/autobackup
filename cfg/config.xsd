@@ -1,0 +1,228 @@
+<?xml version="1.0"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+	<xs:element name="config" type="configComplexType">
+	</xs:element>
+
+
+    <xs:attribute name="NewAttribute" type="xs:string"></xs:attribute>
+
+    <xs:complexType name="configComplexType">
+    	<xs:sequence>
+    		<xs:element minOccurs="1" maxOccurs="1" name="hosts" type="hostsComplexType">
+    		</xs:element>
+    		<xs:element minOccurs="1" maxOccurs="1" name="devices" type="devicesComplexType">
+    		</xs:element>
+    		<xs:element minOccurs="1" maxOccurs="1"
+    			name="mountpoints" type="mountpointsComplexType">
+    		</xs:element>
+    		<xs:element minOccurs="1" maxOccurs="1" name="backups" type="backupsComplexType">
+    		</xs:element>
+    		<xs:element minOccurs="1" maxOccurs="1" name="rsync" type="rsyncComplexType">
+    		</xs:element>
+    		<xs:element minOccurs="1" maxOccurs="1" name="output" type="outputComplexType">
+    		</xs:element>
+    	</xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="hostsComplexType">
+    	<xs:sequence>
+    		<xs:element minOccurs="1" maxOccurs="unbounded"
+    			name="host" type="hostComplexType">
+    		</xs:element>
+    	</xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="devicesComplexType">
+    	<xs:sequence>
+    		<xs:element minOccurs="1" maxOccurs="unbounded"
+    			name="device">
+    			<xs:complexType>
+    				<xs:sequence>
+    					<xs:element minOccurs="1" maxOccurs="1"
+    						name="name" type="xs:string">
+    					</xs:element>
+    					<xs:element minOccurs="1" maxOccurs="1"
+    						name="uuid" type="uuid">
+    					</xs:element>
+    					<xs:element minOccurs="1" maxOccurs="1"
+    						name="filesystem" type="xs:string">
+    					</xs:element>
+    					<xs:element minOccurs="1" maxOccurs="1"
+    						name="host" type="id">
+    					</xs:element>
+    				</xs:sequence>
+    				<xs:attribute name="id" type="xs:int"></xs:attribute>
+    			</xs:complexType>
+    		</xs:element>
+    	</xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="mountpointsComplexType">
+    	<xs:sequence>
+    		<xs:element minOccurs="1" maxOccurs="unbounded"
+    			name="mountpoint">
+    			<xs:complexType>
+    				<xs:sequence>
+    					<xs:element minOccurs="1" maxOccurs="1"
+    						name="path" type="absolutePath">
+    					</xs:element>
+    					<xs:element minOccurs="1" maxOccurs="1"
+    						name="create" type="xs:boolean">
+    					</xs:element>
+                        <xs:element minOccurs="1" maxOccurs="1" name="host" type="id">
+    					</xs:element>
+                    </xs:sequence>
+    				<xs:attribute name="id" type="xs:int"></xs:attribute>
+    			</xs:complexType>
+    		</xs:element>
+    	</xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="backupsComplexType">
+    	<xs:sequence>
+    		<xs:element minOccurs="0" maxOccurs="unbounded"
+    			name="backup" type="backupComplexType">
+    		</xs:element>
+    	</xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="rsyncComplexType">
+    	<xs:sequence>
+    		<xs:element minOccurs="1" maxOccurs="1"
+    			name="additionalArguments">
+    			<xs:complexType>
+    				<xs:sequence>
+    					<xs:element minOccurs="0" maxOccurs="unbounded"
+    						name="argument" type="cmdArg">
+    					</xs:element>
+    				</xs:sequence>
+    			</xs:complexType>
+    		</xs:element>
+    	</xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="outputComplexType">
+    	<xs:sequence>
+    		<xs:element minOccurs="1" maxOccurs="1" name="language"
+    			type="xs:string">
+    		</xs:element>
+    	</xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="hostComplexType">
+    	<xs:sequence>
+    		<xs:choice>
+    			<xs:element name="ip" type="ip"></xs:element>
+    			<xs:element name="hostname" type="xs:string"></xs:element>
+    		</xs:choice>
+    		<xs:element name="user" type="xs:string"></xs:element>
+    	</xs:sequence>
+    	<xs:attribute name="id" type="xs:int"></xs:attribute>
+    </xs:complexType>
+    <xs:complexType name="backupComplexType">
+    	<xs:sequence>
+    		<xs:element minOccurs="1" maxOccurs="1" name="source" type="sourceComplexType">
+    		</xs:element>
+    		<xs:element minOccurs="1" maxOccurs="1"
+    			name="destination" type="destinationComplexType">
+    		</xs:element>
+    		<xs:element minOccurs="1" maxOccurs="1" name="interval"
+    			type="xs:duration">
+    		</xs:element>
+    		<xs:element minOccurs="1" maxOccurs="1"
+    			name="expirationInterval" type="xs:duration">
+    		</xs:element>
+    		<xs:element minOccurs="1" maxOccurs="1"
+    			name="expirationCount" type="xs:int">
+    		</xs:element>
+    	</xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="sourceComplexType">
+    	<xs:sequence>
+    		<xs:element minOccurs="1" maxOccurs="1" name="host"
+    			type="id">
+    		</xs:element>
+    		<xs:choice>
+    			<xs:sequence>
+    				<xs:element minOccurs="1" maxOccurs="1"
+    					name="device" type="id">
+    				</xs:element>
+    				<xs:element minOccurs="1" maxOccurs="1"
+    					name="mountpoint" type="id">
+    				</xs:element>
+    				<xs:element minOccurs="1" maxOccurs="1"
+    					name="subdirectory" type="relativePath">
+    				</xs:element>
+    			</xs:sequence>
+    			<xs:sequence>
+    				<xs:element minOccurs="1" maxOccurs="1"
+    					name="directory" type="absolutePath">
+    				</xs:element>
+    			</xs:sequence>
+    		</xs:choice>
+    	</xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="destinationComplexType">
+    	<xs:sequence>
+    		<xs:element minOccurs="1" maxOccurs="1" name="host"
+    			type="id">
+    		</xs:element>
+    		<xs:choice minOccurs="0" maxOccurs="1">
+    			<xs:sequence minOccurs="1" maxOccurs="1">
+    				<xs:element minOccurs="1" maxOccurs="1"
+    					name="device" type="id">
+    				</xs:element>
+    				<xs:element minOccurs="1" maxOccurs="1"
+    					name="mountpoint" type="id">
+    				</xs:element>
+    				<xs:sequence minOccurs="1" maxOccurs="1">
+    					<xs:element minOccurs="1" maxOccurs="1"
+    						name="subdirectory" type="relativePath">
+    					</xs:element>
+    					<xs:element minOccurs="1" maxOccurs="1"
+    						name="subdirectoryCreate" type="xs:boolean">
+    					</xs:element>
+    				</xs:sequence>
+    			</xs:sequence>
+    			<xs:sequence minOccurs="1" maxOccurs="1">
+    				<xs:element minOccurs="1" maxOccurs="1"
+    					name="directory" type="absolutePath">
+    				</xs:element>
+    				<xs:element minOccurs="1" maxOccurs="1"
+    					name="directoryCreate" type="xs:boolean">
+    				</xs:element>
+    			</xs:sequence>
+    		</xs:choice>
+    	</xs:sequence>
+    </xs:complexType>
+
+
+
+    <xs:simpleType name="id">
+    	<xs:restriction base="xs:string"></xs:restriction>
+    </xs:simpleType>
+
+    <xs:simpleType name="relativePath">
+    	<xs:restriction base="xs:string">
+    		<xs:pattern value="^\./.*"></xs:pattern>
+    	</xs:restriction>
+    </xs:simpleType>
+    
+    <xs:simpleType name="ip">
+    	<xs:restriction base="xs:string">
+    		<xs:pattern value="\d{1,3}(\.\d{1,3}){3}"></xs:pattern>
+    	</xs:restriction>
+    </xs:simpleType>
+    
+    <xs:simpleType name="cmdArg">
+    	<xs:restriction base="xs:string">
+    		<xs:pattern value="-[a-zA-Z]|--[a-zA-Z]{2,}"></xs:pattern>
+    	</xs:restriction>
+    </xs:simpleType>
+
+    <xs:simpleType name="absolutePath">
+    	<xs:restriction base="xs:string">
+    		<xs:pattern value="^/.*"></xs:pattern>
+    	</xs:restriction>
+    </xs:simpleType>
+
+    <xs:simpleType name="uuid">
+    	<xs:restriction base="xs:string">
+    		<xs:pattern value="\w{8}-(\w{4}-){3}\w{12}"></xs:pattern>
+    	</xs:restriction>
+    </xs:simpleType>
+</xs:schema>
+
