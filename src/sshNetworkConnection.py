@@ -15,7 +15,7 @@ class SSHNetworkConnection(networkConnection.NetworkConnection):
         
     def __del__(self):
         pass
-        #At this point, the object may already be deleted and disconnect may not be found.
+        # At this point, the object may already be deleted and disconnect may not be found.
         #self.diconnect()
     
     def connect(self, user, timeout, remoteShell):
@@ -40,18 +40,11 @@ class SSHNetworkConnection(networkConnection.NetworkConnection):
                                              stderr=subprocess.PIPE,\
                                              stdin=subprocess.PIPE,\
                                              universal_newlines=True)
-        
-        #self.__sshProcess.stdin.write("TAsdfdsfsfsfd\n")
-        #self.__sshProcess.stdin.flush()
-        #print self.__sshProcess.stdout.read()
-        
+                
         time.sleep(1)
         print self.__sshProcess.poll()
         print self.__sshProcess.returncode
         
-        # Unblock the pipes, otherwise readline() will block if there is nothing to read
-        #fdManager.unblockFileDescriptor(self.__sshProcess.stdout)
-        #fdManager.unblockFileDescriptor(self.__sshProcess.stderr)
 
         
         # We will poll the process output once every 100 ms 
@@ -96,10 +89,9 @@ class SSHNetworkConnection(networkConnection.NetworkConnection):
             output[i] = "".join(output[i])
             
         if output[1]:
-            pass#raise Exception("Some error orrcured:\n{0}".format(output[1]))
+            raise Exception("Some error orrcured, stderr:\n{0}".format(output[1]))
         
-        print("Connection established:\nSTDOUT:\n{0}\nSTDERR:\n{1}".format(output[0],output[1]))
-        
+        return (output[0],output[1])
          
      
     def disconnect(self):
@@ -118,12 +110,10 @@ class SSHNetworkConnection(networkConnection.NetworkConnection):
             stdpipe[i].flush()
             
         command = "{0} ; echo \"{1}@$?\"".format(" ".join(command), commandID)
-        print command
-        print self.__sshProcess.poll()
-        print "done"
+        
         self.__sshProcess.stdin.write(command)
         self.__sshProcess.stdin.flush()
-        print "faggot"
+        
         output = [[],[]]
         lines = [[],[]]
         
@@ -165,11 +155,8 @@ class SSHNetworkConnection(networkConnection.NetworkConnection):
             output[i] = "".join(output[i])
             
         returnstatus = lastLine.split("@")[1]
-                    
-        print("Connection established:\n<RETURNSTATUS>:{2}\n<STDOUT>:\n{0}\n<STDERR>:\n{1}".format(\
-                                                        output[0],output[1]), returnstatus)
-        
-        return(returnstatus, output[0], output[2])
+                            
+        return(returnstatus, output[0], output[1])
 
 
 
