@@ -1,5 +1,6 @@
 import fcntl
 import os
+import errno
 
 def unblockFileDescriptor(path):
     fd = path.fileno()
@@ -9,7 +10,7 @@ def unblockFileDescriptor(path):
 def readAll(path):
     output = []
     while True:
-        line = nonBlockingReadline(path)
+        line = nonBlockingRead(path)
         if not line:
             break
         else:
@@ -20,5 +21,11 @@ def readAll(path):
 def nonBlockingReadline(path):
     try:
         return path.readline()
+    except IOError:
+        return ""
+    
+def nonBlockingRead(path):
+    try:
+        return path.read()
     except IOError:
         return ""
