@@ -10,13 +10,14 @@ class SSHNetworkConnection(networkConnection.NetworkConnection):
         self.__host = host
         self.__port = port
         
-        
         self.__sshProcess = None
+        
         
     def __del__(self):
         pass
         # At this point, the object may already be deleted and disconnect may not be found.
         #self.diconnect()
+    
     
     def connect(self, user, timeout, remoteShell):
         if self.__sshProcess != None:
@@ -38,7 +39,6 @@ class SSHNetworkConnection(networkConnection.NetworkConnection):
                                              stdout=subprocess.PIPE,\
                                              stderr=subprocess.PIPE,\
                                              stdin=subprocess.PIPE)        
-
         
         # We will poll the process output once every 100 ms 
         POLL_INTERVAL = 100
@@ -91,12 +91,12 @@ class SSHNetworkConnection(networkConnection.NetworkConnection):
         
         return (output[0],output[1])
     
-         
-     
+             
     def disconnect(self):
         if self.__sshProcess != None:
             self.__sshProcess.terminate()
             self.__sshProcess = None    
+    
     
     def execute(self, command, timeout):
         commandID = idGenerator.generateID(20)
@@ -116,7 +116,6 @@ class SSHNetworkConnection(networkConnection.NetworkConnection):
         maxPolls = timeout / POLL_INTERVAL
         polls = 0
  
-                     
         command = '{0} ; echo {1}@$?\n'.format(command, commandID)
         self.__sshProcess.stdin.write(command)
         self.__sshProcess.stdin.flush()
@@ -137,7 +136,6 @@ class SSHNetworkConnection(networkConnection.NetworkConnection):
                         finished = True
                     elif line:
                         output[i].append(line)
-
                     
             if finished:
                 break
@@ -154,21 +152,3 @@ class SSHNetworkConnection(networkConnection.NetworkConnection):
 
     def isConnected(self):
         return self.__sshProcess != None
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  
