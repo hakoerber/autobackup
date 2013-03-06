@@ -8,5 +8,5 @@ setup(name='autobackup',
       author = 'Hannes Körber',
       auther_email = 'hannes.koerber@gmail.com',
       url = 'http://github.com/whatevsz/autobackup/',
-      packages=[]
+      packages=['apscheduler']
       )
