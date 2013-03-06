@@ -24,7 +24,6 @@ class SSHNetworkConnection(networkConnection.NetworkConnection):
          
         connectionID = idGenerator.generateID(20)
         
-        # TODO change back
         args = ["ssh",\
                 "-o", "StrictHostKeyChecking=yes",\
                 "-p", str(self.__port),\
@@ -32,13 +31,13 @@ class SSHNetworkConnection(networkConnection.NetworkConnection):
                 "-x",\
                 "-l", user,\
                 self.__host.ip,\
+                # Double quotes will automatically be added by subprocess.list2cmdline()
                 'echo {0} ; {1}'.format(connectionID, remoteShell)]
-                                        
-        self.__sshProcess = subprocess.Popen(args, bufsize=-1,\
+                                       
+        self.__sshProcess = subprocess.Popen(args, shell=False, bufsize=-1,\
                                              stdout=subprocess.PIPE,\
                                              stderr=subprocess.PIPE,\
-                                             stdin=subprocess.PIPE,\
-                                             universal_newlines=True)        
+                                             stdin=subprocess.PIPE)        
 
         
         # We will poll the process output once every 100 ms 
@@ -95,7 +94,6 @@ class SSHNetworkConnection(networkConnection.NetworkConnection):
          
      
     def disconnect(self):
-        print("Disconnecting ...")
         if self.__sshProcess != None:
             self.__sshProcess.terminate()
             self.__sshProcess = None    
@@ -107,47 +105,39 @@ class SSHNetworkConnection(networkConnection.NetworkConnection):
         # Flush streams as precaution
         for i in 0,1:
             stdpipe[i].flush()
-            
-        command = '\'{0} ; echo {1}@$?\''.format(" ".join(command), commandID)
-        print command
-        self.__sshProcess.stdin.write(command)
-        self.__sshProcess.stdin.flush()
-        
+                         
         output = [[],[]]
         lines = [[],[]]
         
         lastLine = None
         finished = False
         
-        POLL_INTERVAL = 100
+        POLL_INTERVAL = 1000
         maxPolls = timeout / POLL_INTERVAL
         polls = 0
+ 
+                     
+        command = '{0} ; echo {1}@$?\n'.format(command, commandID)
+        self.__sshProcess.stdin.write(command)
+        self.__sshProcess.stdin.flush()
         
         while True:
             polls = polls + 1
-            print "poll {} of {}".format(polls, maxPolls)
+
             if polls >= maxPolls:
                 raise Exception("timeout")
-            
-            
-            time.sleep(POLL_INTERVAL / 1000.0)
-            
+                                    
             for i in 0,1:
                 lines[i] = fdManager.readAll(stdpipe[i])
-            
-            if len(lines[i]):
-                print lines[i]
-                
+                            
             for i in 0,1:
                 for line in lines[i].split("\n"):
-                    if line:
+                    if i == 0 and line.startswith(commandID):
+                        lastLine = line
+                        finished = True
+                    elif line:
                         output[i].append(line)
 
-            for line in lines[0].split("\n"):
-                if line.startswith(commandID):
-                    # Command finished
-                    lastLine = line
-                    finished = True
                     
             if finished:
                 break
@@ -155,11 +145,11 @@ class SSHNetworkConnection(networkConnection.NetworkConnection):
             
         for i in 0,1:
             output[i].append(fdManager.readAll(stdpipe[i]))
-            output[i] = "".join(output[i])
+            output[i] = "\n".join(output[i])
             
-        returnstatus = lastLine.split("@")[1]
+        exitCode = lastLine.split("@")[1]
                             
-        return(returnstatus, output[0], output[1])
+        return(exitCode, output[0], output[1])
 
 
     def isConnected(self):
