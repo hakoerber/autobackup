@@ -49,40 +49,50 @@ class Mountpoint(object):
     
     def remove(self):
         '''
-        Removes the mountpoint if it exists, is empty and not active.
+        Removes the mountpoint if it exists, is empty and not active. If you
+        try to remove a non-empty or active mountpoint, an exception will be
+        raised.
         '''
+        raise MountpointBusyError(self)
 
     
     def mount(self, device):
         '''
         Mounts a device on the mountpoint. If the mountpoint is active,
-        mounting is refused, use unmount() beforehand.
+        an exception is raised, so use unmount() beforehand.
         :param device: The device to mount.
         '''
+        raise MountpointBusyError(self)
+
     
     def bind(self, mountpoint, submounts=False):
         '''
         Binds this mountpoint to another mountpoint if the mountpoint is active,
-        otherwise, does nothing.
+        otherwise, does nothing. If the target mountpoint is active or non-empty,
+        or if this mountpoint is not active, an exception will be raised.
         ATTENTION: Binding between different hosts is not supported.
         :param mountpoint: The binding mountpoint.
         :param submounts: If True, all submounts of this mountpoint will also be
         attached to the binding mountpoint. If False, they will not be available.
         '''
+        raise MountpointBusyError(mountpoint)
+        raise MountpointNotReadyError(self)
+    
     
     def remount(self, newOptions=None):
         '''
         Remounts the device on this mountpoint with different options
-        if any are given. If no device is mounted on the mountpoint, nothing
-        happens.
+        if any are given. If the mountpoint is not active, an exception is raised.
         :param newOptions: The options for the remount, if none are given the
         old options will be used.
         '''
+        raise MountpointNotReadyError(self)
     
     def unmount(self):
         '''
-        Unmounts the device if the mountpoint is active, otherwise, does nothing.
+        Unmounts the device if the mountpoint is active, otherwise, raises an exception.
         '''
+        raise MountpointNotReadyError(self)
     
 
     def exists(self):
@@ -105,4 +115,22 @@ class Mountpoint(object):
         :returns: True if the mountpoint is active, False otherwise.
         '''
         return False
+    
+    
+class MountpointBusyError(Exception):
+    '''
+    Exception that is raised when you try to remove a non-empty or active
+    mountpoint, try to mount a device to a non-empty or active mountpoint,
+    or try to bind to an active or non-empty mountpoint.
+    '''
+    def __init__(self, mountpoint):
+        self.mountpoint = mountpoint
+        
+class MountpointNotReadyError(Exception):
+    '''
+    Exception that is raised if you try to bind, remount or unmount an non-active
+    mountpoint
+    '''
+    def __init__(self, mountpoint):
+        self.mountpoint = mountpoint
     
