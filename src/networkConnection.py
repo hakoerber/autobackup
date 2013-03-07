@@ -6,10 +6,10 @@ import time
 class NetworkConnection(object):
     """Abstract base class representing a network connection."""
     
-    def __init__(self, Host, port):
+    def __init__(self, host, user, port):
         raise NotImplementedError()
     
-    def connect(self, user, timeout, remoteShell):
+    def connect(self, timeout, remoteShell):
         """Connects to the host as <user> and starts a shell specified by <remoteShell>.
         Raises a timeout error if <timeout> (in milliseconds) exceeded."""
         raise NotImplementedError()
@@ -30,9 +30,10 @@ class NetworkConnection(object):
 
 class SSHNetworkConnection(NetworkConnection):
     
-    def __init__(self, host, port):
+    def __init__(self, host, user, port):
         self.__host = host
         self.__port = port
+        self.__user = user
         
         self.__sshProcess = None
         
@@ -43,7 +44,7 @@ class SSHNetworkConnection(NetworkConnection):
         #self.diconnect()
     
     
-    def connect(self, user, timeout, remoteShell):
+    def connect(self, timeout, remoteShell):
         if self.__sshProcess != None:
             return 
          
@@ -54,7 +55,7 @@ class SSHNetworkConnection(NetworkConnection):
                 "-p", str(self.__port),\
                 "-q",\
                 "-x",\
-                "-l", user,\
+                "-l", self.__user,\
                 self.__host.ip,\
                 # Double quotes will automatically be added by subprocess.list2cmdline()
                 'echo {0} ; {1}'.format(connectionID, remoteShell)]
