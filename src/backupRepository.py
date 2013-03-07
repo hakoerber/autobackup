@@ -39,8 +39,8 @@ class BackupRepository(object):
         self.__sourceHost = sourceHost
         self.__sources = sources
         
-        self.__host = host
-        self.__path = path
+        self.host = host
+        self.path = path
         self.__directories = directories
         
         self.__interval = interval
@@ -70,12 +70,12 @@ class BackupRepository(object):
         
         for backup in self.__backups:
             if backup.birth < maxBirth:
-                self.__onBackupExpired(self.__host, backup.directoryName)
+                self.__onBackupExpired(self.host, backup.directoryName)
             if backup.birth >= minBirth:
                 backupNeeded = False
                 
         if backupNeeded:
-            self.__onBackupRequired(self.__host, self.__generateNewBackupName(), self.__sourceHost, self.__sources)
+            self.__onBackupRequired(self.host, self.__generateNewBackupName(), self.__sourceHost, self.__sources)
             
     
     def __initializeBackups(self):

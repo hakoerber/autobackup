@@ -31,9 +31,9 @@ class NetworkConnection(object):
 class SSHNetworkConnection(NetworkConnection):
     
     def __init__(self, host, user, port):
-        self.__host = host
+        self.host = host
         self.__port = port
-        self.__user = user
+        self.user = user
         
         self.__sshProcess = None
         
@@ -55,8 +55,8 @@ class SSHNetworkConnection(NetworkConnection):
                 "-p", str(self.__port),\
                 "-q",\
                 "-x",\
-                "-l", self.__user,\
-                self.__host.ip,\
+                "-l", self.user,\
+                self.host.ip,\
                 # Double quotes will automatically be added by subprocess.list2cmdline()
                 'echo {0} ; {1}'.format(connectionID, remoteShell)]
                                        
