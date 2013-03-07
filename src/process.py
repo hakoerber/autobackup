@@ -139,11 +139,37 @@ def func_directoryGetFiles(host, user, path):
     in the directory. Directories can be identified by a succeeding
     slash.
     '''
-    args = ["ls", "-A", "-1", path]
+    args = ["ls", "-A", "-1", "-p", path]
     (exitCode, stdoutdata, _) = execute(host, args, user)
     if exitCode != 0:
         return None
     return stdoutdata.split('\n')
+
+
+def func_createDirectory(host, user, path, createParents):
+    '''
+    
+    :param host: Host on which to execute the command.
+    :param user: User as whom to execute the command.
+    :param path: The path of the new directory.
+    :returns: A tuple with the exit code, the stdout and stderr data.
+    '''
+    args = ["mkdir"]
+    if createParents:
+        args.append("-p")
+    args.append[path]
+    return execute(host, args, user)
+
+def func_removeDirectory(host, user, path):
+    '''
+    
+    :param host: Host on which to execute the command.
+    :param user: User as whom to execute the command.
+    :param path: The path of the directory that shall be deleted.
+    :returns: A tuple with the exit code, the stdout and stderr data.
+    '''
+    args = ["rmdir", path]
+    return execute(host, args, user)
     
     
     
