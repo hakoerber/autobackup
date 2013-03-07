@@ -1,4 +1,6 @@
 import networkConnection
+import getpass
+import subprocess
 
 CONNECTION = networkConnection.SSHNetworkConnection
 CONNECTION_PORT = 22
@@ -9,25 +11,39 @@ COMMAND_TIMEOUT = 10 * 1000
 
 __connections = []
 
-def execute(host, user, args):
+def execute(host, user=None, args):
     '''
     Executes a command on a specific host as user. Will connect to the host
-    and maintain the connection until you explicitly disconnect to 
-    host with disconnect().
+    and maintain the connection if the host is remote until you explicitly 
+    disconnect to host with disconnect(). If the host is the localhost, the
+    command will be executed locally.
     :param host: The host on which the command is to be executed.
-    :param user: The user as whom to run the command.
+    :param user: The user as whom to run the command. If no user is given, the command
+    will be executed as the current user. If you run the command on the localhost, the
+    username must mach the current user, otherwise an exception will be raised.
     :param args: A list of arguments of the command.
     :returns: A touple which contains the exit code of the command, the whole
     output to stdout and the whole output to stderr.
     '''
-    connection = __getConnection(host, user)
+    if not host.isLocalhost():
+        # Connect to a remote host.
+        connection = __getConnection(host, user)
     
-    if not connection.connected():
-        connection.connect(CONNECTION_TIMEOUT, CONNECTION_REMOTE_SHELL)
+        if not connection.connected():
+            connection.connect(CONNECTION_TIMEOUT, CONNECTION_REMOTE_SHELL)
         
-    (exitCode, stdoutdata, stderrdata) = connection.execute(args, COMMAND_TIMEOUT)
+            (exitCode, stdoutdata, stderrdata) = connection.execute(args, COMMAND_TIMEOUT)
     
-    return (exitCode, stdoutdata, stderrdata)
+            return (exitCode, stdoutdata, stderrdata)
+    else:
+        # Just execute the command locally.
+        if user != getpass.getuser():
+            raise ValueError("Cannot change the user on localhost.")
+        process = subprocess.Popen(args, stdout=subprocess.PIPE, 
+                                   stderr=subprocess.PIPE, bufsize=-1)
+        (stdoutdata, stderrdata) = process.communicate()
+        return (process.returncode, stdoutdata, stderrdata)
+        
     
 
 def disconnect(host, user=None):
