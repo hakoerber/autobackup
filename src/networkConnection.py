@@ -137,7 +137,7 @@ class SSHNetworkConnection(NetworkConnection):
         lastLine = None
         finished = False
         
-        POLL_INTERVAL = 1000
+        POLL_INTERVAL = 100
         maxPolls = timeout / POLL_INTERVAL
         polls = 0
  
