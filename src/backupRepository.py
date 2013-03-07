@@ -9,9 +9,40 @@ TIMEFORMAT = '%Y-%m-%dT%H:%M:%S'
 FORMAT     = "{0}.{1}".format(TIMEFORMAT, SUFFIX)
 
 class BackupRepository(object):
-    def __init__(self, directories, interval, maxCount, maxAge):
+    '''
+    Represents a backup repository, where a number of backups can be stored. Requires information
+    about the expiration of backups and the interval in which backups are to be created. Will raise
+    events accordingly.
+    '''
+    
+    def __init__(self, host, path, directories, sourceHost, sources, interval, maxCount, maxAge):
+        '''
+        :param sourceHost:
+        The host of the source directories.
+        :param sources:
+        A list with absolute pathes to all source directories.
+        :param host:
+        The host of the repository.
+        :param path:
+        The absolute path to the repository.
+        :param directories:
+        The subdirectories of the repository.
+        :param interval:
+        An timedelta object describing the desired interval between two backups.
+        :param maxCount:
+        The maximum amount of backups to retain. If this number is exceeded, the oldest
+        backups are to be deleted first.
+        :param maxAge:
+        The maximum age of all backups. Older backups are to be deleted.
+        '''
+        
+        self.__sourceHost = sourceHost
+        self.__sources = sources
+        
+        self.__host = host
+        self.__path = path
         self.__directories = directories
-        self.__backups = None
+        
         self.__interval = interval
         self.__maxCount = maxCount
         self.__maxAge = maxAge
@@ -27,7 +58,6 @@ class BackupRepository(object):
         self.__maxAge = maxCountAge if maxCountAge > maxAge else maxAge
         
 
-    
     def __minuteElapsed(self):
         self.__checkBackups()
     
@@ -40,17 +70,28 @@ class BackupRepository(object):
         
         for backup in self.__backups:
             if backup.birth < maxBirth:
-                self.backupExpired(self, backup)
+                self.__onBackupExpired(self.__host, backup.directoryName)
             if backup.birth >= minBirth:
                 backupNeeded = False
                 
         if backupNeeded:
-            self.backupRequired(self)
+            self.__onBackupRequired(self.__host, self.__generateNewBackupName(), self.__sourceHost, self.__sources)
             
     
-   
     def __initializeBackups(self):
-        self.__backups = None
+        for directory in self.__directories:
+            self.__backups.append(Backup(directory))
+            
+    def __onBackupRequired(self, host, newBackupDirectoryName, sourceHost, sources):
+        if len(self.backupRequired):
+            self.backupRequired(host, newBackupDirectoryName, sourceHost, sources)
+            
+    def __onBackupExpired(self, host, expiredBackupDirectoryName):
+        if len(self.backupExpired):
+            self.backupExpired(host, expiredBackupDirectoryName)
+    
+    def __generateNewBackupName(self):
+        raise NotImplementedError()
     
     
 class Backup(object):
@@ -61,4 +102,8 @@ class Backup(object):
 
     def __getDate(self, name):
         self.birth = datetime.datetime.strptime(name.split('.')[0])
+        
+    def __getDirectoryName(self):
+        return self.__directoryName
+    directoryName = property(__getDirectoryName)
         
