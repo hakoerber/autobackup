@@ -41,11 +41,13 @@ class Mountpoint(object):
         self.__options = options
         self.__create = create
         
+        
     def create(self):
         '''
         Creates the mountpoint if it does not exist already.
         '''
         pass
+    
     
     def remove(self):
         '''
@@ -88,6 +90,7 @@ class Mountpoint(object):
         '''
         raise MountpointNotReadyError(self)
     
+    
     def unmount(self):
         '''
         Unmounts the device if the mountpoint is active, otherwise, raises an exception.
@@ -102,6 +105,7 @@ class Mountpoint(object):
         '''
         return False    
     
+    
     def isEmpty(self):
         '''
         Determines whether the mountpoint is empty.
@@ -109,12 +113,14 @@ class Mountpoint(object):
         '''
         return False
     
+    
     def isActive(self):
         '''
         Determines whether the mountpoint is active.
         :returns: True if the mountpoint is active, False otherwise.
         '''
         return False
+    
     
     
 class MountpointBusyError(Exception):
@@ -125,6 +131,8 @@ class MountpointBusyError(Exception):
     '''
     def __init__(self, mountpoint):
         self.mountpoint = mountpoint
+        
+        
         
 class MountpointNotReadyError(Exception):
     '''
