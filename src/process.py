@@ -17,13 +17,17 @@ def execute(host, user, args):
     :param host: The host on which the command is to be executed.
     :param user: The user as whom to run the command.
     :param args: A list of arguments of the command.
+    :returns: A touple which contains the exit code of the command, the whole
+    output to stdout and the whole output to stderr.
     '''
     connection = __getConnection(host, user)
     
     if not connection.connected():
         connection.connect(CONNECTION_TIMEOUT, CONNECTION_REMOTE_SHELL)
         
-    connection.execute(args, COMMAND_TIMEOUT)
+    (exitCode, stdoutdata, stderrdata) = connection.execute(args, COMMAND_TIMEOUT)
+    
+    return (exitCode, stdoutdata, stderrdata)
     
 
 def disconnect(host, user=None):
