@@ -103,20 +103,47 @@ class fileTypes(object):
     DIRECTORY="d"
     REGULAR="f"
 
+
 def func_fileExists(host, user, path, filetype):
     '''
-    :param host:
-    :param user:
+    
+    :param host: Host on which to execute the command.
+    :param user: User as whom to execute the command.
     :param path:
     :param filetype:
+    :returns: True if the file file exists, false otherwise.
     '''
     args = ["test", "-" + filetype , path]
     (exitCode, _, _) = execute(host, args, user)
     return exitCode == 0
 
+
 def func_directoryEmpty(host, user, path):
-    raise NotImplemented()
+    '''
     
+    :param host: Host on which to execute the command.
+    :param user: User as whom to execute the command.
+    :param path: The path of the directory.
+    :returns: True if the directory is empty, false otherwise.
+    '''
+    return len(func_directoryGetFiles(host, user, path)) == 0
+    
+    
+def func_directoryGetFiles(host, user, path):
+    '''
+    
+    :param host: Host on which to execute the command.
+    :param user: User as whom to execute the command.
+    :param path: The path of the directory.
+    :returns: A touple with the names of all files and subdirectory
+    in the directory. Directories can be identified by a succeeding
+    slash.
+    '''
+    args = ["ls", "-A", "-1", path]
+    (exitCode, stdoutdata, _) = execute(host, args, user)
+    if exitCode != 0:
+        return None
+    return stdoutdata.split('\n')
     
     
     
