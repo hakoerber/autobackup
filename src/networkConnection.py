@@ -141,7 +141,7 @@ class SSHNetworkConnection(NetworkConnection):
         maxPolls = timeout / POLL_INTERVAL
         polls = 0
  
-        command = '{0} ; echo {1}@$?\n'.format(command, commandID)
+        command = '{0} ; echo {1}@$?\n'.format(subprocess.list2cmdline(command), commandID)
         self.__sshProcess.stdin.write(command)
         self.__sshProcess.stdin.flush()
         
