@@ -27,6 +27,8 @@ def execute(host, user=None, args):
     '''
     if not host.isLocalhost():
         # Connect to a remote host.
+        if user == None:
+            raise ValueError("A user must be specified for remote connection.")
         connection = __getConnection(host, user)
     
         if not connection.connected():
