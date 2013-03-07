@@ -113,6 +113,9 @@ def func_fileExists(host, user, path, filetype):
     args = ["test", "-" + filetype , path]
     (exitCode, _, _) = execute(host, args, user)
     return exitCode == 0
+
+def func_directoryEmpty(host, user, path):
+    raise NotImplemented()
     
     
     
