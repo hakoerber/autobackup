@@ -11,7 +11,7 @@ COMMAND_TIMEOUT = 10 * 1000
 
 __connections = []
 
-def execute(host, user=None, args):
+def execute(host, args, user=None):
     '''
     Executes a command on a specific host as user. Will connect to the host
     and maintain the connection if the host is remote until you explicitly 
@@ -98,8 +98,21 @@ def __getConnection(host, user):
         
     return connection
 
-    
-    
+class fileTypes(object):
+    BLOCK_SPECIAL="b"
+    DIRECTORY="d"
+    REGULAR="f"
+
+def func_fileExists(host, user, path, filetype):
+    '''
+    :param host:
+    :param user:
+    :param path:
+    :param filetype:
+    '''
+    args = ["test", "-" + filetype , path]
+    (exitCode, _, _) = execute(host, args, user)
+    return exitCode == 0
     
     
     

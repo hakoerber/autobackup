@@ -1,3 +1,7 @@
+import os
+import process
+import getpass
+
 class Device(object):
     '''
     Represents a hardware storage device on a specific host,
@@ -14,12 +18,20 @@ class Device(object):
         self.__filesystem = filesystem
         self.__host = host
         
-    def isAvailable(self):
+    def isAvailable(self, user=None):
         '''
         Determines whether the device is available.
+        :param user: The user who is to own the process to check the availability.
+        If the host is the localhost or None is given, the current user will be used
+        regardless of the value of the parameter.
         :returns: True if the device is available, otherwise false.
         '''
-        return False
+        if user == None or self.host.isLocalhost():
+            user = getpass.getuser()
+            
+        return process.func_fileExists(self.__host, user, 
+                                       os.path.join("/dev/disk/by-uuid", self.uuid),
+                                       process.fileTypes.BLOCK_SPECIAL)    
     
     
 class Mountpoint(object):
@@ -27,7 +39,7 @@ class Mountpoint(object):
     Represents a mountpoint on a specific host and provices methods to
     mount and unmount devices on this mountpoint, among others.
     '''
-    def __init__(self, host, path, options, create):
+    def __init__(self, host, path, options, create, user=None):
         '''
         :param host: The host of the mountpoint.
         :param path: The absolute on the specified host.
@@ -35,11 +47,17 @@ class Mountpoint(object):
         :param create: A boolean that specifies whether the mountpoint
         is to be created automatically if it does not exist. You can always
         create the mountpoint manually with create()
+        :param user: The user who is own all processes spawned by this class.
+        If the host is the localhost or None is given, the current user will be used
+        regardless of the value of the parameter, even for remote mountpoints.
         '''
         self.__host = host
         self.__path = path
         self.__options = options
         self.__create = create
+        self.__user = user
+        if user == None or host.isLocalhost():
+            self.__user = getpass.getuser()
         
         
     def create(self):
@@ -103,8 +121,7 @@ class Mountpoint(object):
         Determines whether the mountpoint exists.
         :returns: True if the mountpoint exists, False otherwise.
         '''
-        return False    
-    
+        return process.func_fileExists(self.__host, self.__user, self.__path, process.fileTypes.DIRECTORY)    
     
     def isEmpty(self):
         '''
