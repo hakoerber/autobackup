@@ -10,6 +10,9 @@ class Host(object):
             self.__ip = ip if ip != None else socket.gethostbyname(hostname)
         except socket.gaierror:
             raise ValueError("Unknown hostname.")
+        
+    def isLocalhost(self):
+        return self.ip.startswith("127.")
 
     def __getIP(self):
         return self.__ip
