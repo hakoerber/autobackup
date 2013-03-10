@@ -69,10 +69,11 @@ class Mountpoint(object):
         should be created if they do not exist. If False and the parent directories
         do not exist, an exception will be raised.
         '''
-        (exitCode, _, stderrdata) = process.func_createDirectory(self.host, self.user, self.path, 
-                                                                 createParents)
-        if exitCode != 0:
-            raise Exception("Creating the mountpoint failed: " + stderrdata)
+        if not self.exists():
+            (exitCode, _, stderrdata) = process.func_createDirectory(self.host, self.user, self.path, 
+                                                                     createParents)
+            if exitCode != 0:
+                raise Exception("Creating the mountpoint failed: " + stderrdata)
     
     
     def remove(self):
@@ -91,23 +92,64 @@ class Mountpoint(object):
     def mount(self, device):
         '''
         Mounts a device on the mountpoint. If the mountpoint is active or does
-        not exist, an exception is raised. Mounting between hosts is not
-        supported yet.
+        not exist, an exception is raised. Mounting between hosts is supported.
         :param device: The device to mount.
         '''
         if self.isEmpty():
             raise MountpointNotReadyError(self)
         if self.isActive():
             raise MountpointBusyError(self)
-        if self.host != device.host:
-            raise ValueError("Mounting between hosts is not supported.")
+
+        # The mount procedure depends on the relation between the host of the device and the host of
+        # the mountpoint:
+        #
+        # o---o-------------o---------------o----------------------------------------------------------------o
+        # |   |  self.host  |  device.host  |  action                                                        |
+        # o---o-------------o---------------o----------------------------------------------------------------o
+        # | 1 |  local      |  local        |  mount locally on same machine                                 |
+        # | 2 |  local      |  remote       |  mount remote device on remote machine, mount remote directory |
+        # |   |             |               |  on same machine with sshfs                                    |
+        # | 3 |  remote     |  local        |  mount local device on local machine and mount local directory |
+        # |   |             |               |  on remote machine with sshfs                                  |
+        # | 4 |  remote     |  remote       |  mount locally on remote machine                               |
+        # o---o-------------o---------------o----------------------------------------------------------------o
+        #
+        # sshfs cannot be used to directly mount a device from/to a remote host, but to mount a directory,
+        # smiliar to mount's bind option. So we first have to mount the device on the same host, and then
+        # use sshfs to mount that directory on the target host.
         
-        args = ["mount", 
-                "-o", ",".join(self.options).lstrip(','),
-                "-t", device.filesystem,
-                "-U", device.uuid,
-                self.path]
+        # The paths to the temporary mountpoints:
+        TEMP_MOUNTPOINT_LOCAL  = "/tmp/mount/temp/"
+        TEMP_MOUNTPOINT_REMOTE = TEMP_MOUNTPOINT_LOCAL
         
+        if self.host == device.host:
+            # case 1 and 4
+            args = ["mount", 
+                    "-o", ",".join(self.options).lstrip(','),
+                    "-t", device.filesystem,
+                    "-U", device.uuid,
+                    self.path]
+        elif self.host.isLocal() and not device.host.isLocal():
+            # case 2
+            remoteTempMountpoint = Mountpoint(device.host, TEMP_MOUNTPOINT_REMOTE,
+                                          self.options, create=False, self.user)
+            remoteTempMountpoint.create()
+            remoteTempMountpoint.mount(device)
+            args = ["sshfs",
+                    "{0}@{1}:{2}".format(self.user, remoteTempMountpoint.host.ip, remoteTempMountpoint.path),
+                    self.path,
+                    "-o", "idmap=user"]
+        elif not self.host.isLocal() and device.host.isLocal(): 
+            # case 3
+            localTempMountpoint = Mountpoint(device.host, TEMP_MOUNTPOINT_REMOTE,
+                                             self.options, create=False, self.user)
+            localTempMountpoint.create()
+            localTempMountpoint.mount(device)
+            args = ["sshfs",
+                    self.path,
+                    "{0}@{1}:{2}".format(self.user, device.host.getRealIP(), localTempMountpoint.path),
+                    "-o", "idmap=user"]
+             
         (exitCode, _, stderrdata) = process.execute(self.host, args, self.user)
         if exitCode != 0:
             raise Exception("Mounting failed: " + stderrdata)
