@@ -7,8 +7,7 @@ Docstring conventions: http://www.python.org/dev/peps/pep-0257/
 General
 - one indentation level is either four spaces or one tab, spaces are preferred
 - lines are to be limited to 79 characters
-- top level functions and classes should be separated by two blank lines
-- class elements (methods etc.) should be separated by one blank line
+- top level functions, methods and classes should be separated by two blank lines
 - don't put multiple statements on one line
 - use brackets when operator priorities are unclear
 
