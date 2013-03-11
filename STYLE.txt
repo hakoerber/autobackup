@@ -31,9 +31,13 @@ Docstrings
   docstring
 - docstrings should be used for all public modules, functions, classes and
   methods
-- The first docstring line should follow the """ without a preceding newline
-- The closing """ should be on a separate line, unless the docstring fits on
-  one line, then put the """ at the end of the line
+- Use
+  """<docstring>"""
+  for one line docstrings,
+  """
+  <docstring>
+  """
+  for multi line docstrings.
 - Use the following templates in your docstrings to make them usable with
   sphinx:
     :param <parameter name>: <parameter description>
