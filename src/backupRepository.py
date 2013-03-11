@@ -51,18 +51,18 @@ class BackupRepository(object):
         self.backupRequired = event.Event()
         
         self.__scheduler = scheduler.Scheduler()
-        self.__scheduler.add_cron_job(self.__minuteElapsed, minute='*')
+        self.__scheduler.add_cron_job(self._minute_elapsed, minute='*')
         self.__scheduler.start()
         
         maxCountAge = maxCount * interval
         self.__maxAge = maxCountAge if maxCountAge > maxAge else maxAge
         
 
-    def __minuteElapsed(self):
-        self.__checkBackups()
+    def _minute_elapsed(self):
+        self._check_backups()
     
     
-    def __checkBackups(self):
+    def _check_backups(self):
         maxBirth = datetime.datetime.now() - self.__maxAge
         minBirth = datetime.datetime.now() - self.__interval
         
@@ -70,27 +70,27 @@ class BackupRepository(object):
         
         for backup in self.__backups:
             if backup.birth < maxBirth:
-                self.__onBackupExpired(self.host, backup.directoryName)
+                self._on_backup_expired(self.host, backup.directoryName)
             if backup.birth >= minBirth:
                 backupNeeded = False
                 
         if backupNeeded:
-            self.__onBackupRequired(self.host, self.__generateNewBackupName(), self.__sourceHost, self.__sources)
+            self._on_backup_required(self.host, self._generate_new_backup_name(), self.__sourceHost, self.__sources)
             
     
-    def __initializeBackups(self):
+    def _initialize_backups(self):
         for directory in self.__directories:
             self.__backups.append(Backup(directory))
             
-    def __onBackupRequired(self, host, newBackupDirectoryName, sourceHost, sources):
+    def _on_backup_required(self, host, newBackupDirectoryName, sourceHost, sources):
         if len(self.backupRequired):
             self.backupRequired(host, newBackupDirectoryName, sourceHost, sources)
             
-    def __onBackupExpired(self, host, expiredBackupDirectoryName):
+    def _on_backup_expired(self, host, expiredBackupDirectoryName):
         if len(self.backupExpired):
             self.backupExpired(host, expiredBackupDirectoryName)
     
-    def __generateNewBackupName(self):
+    def _generate_new_backup_name(self):
         raise NotImplementedError()
     
     
@@ -98,12 +98,12 @@ class Backup(object):
     
     def __init__(self, directoryName):
         self.__directoryName = directoryName
-        self.birth = self.__getDate(self.__directoryName)
+        self.birth = self._get_date(self.__directoryName)
 
-    def __getDate(self, name):
+    def _get_date(self, name):
         self.birth = datetime.datetime.strptime(name.split('.')[0])
         
-    def __getDirectoryName(self):
+    def _get_directory_name(self):
         return self.__directoryName
-    directoryName = property(__getDirectoryName)
+    directoryName = property(_get_directory_name)
         

@@ -25,7 +25,7 @@ def execute(host, args, user=None):
     :returns: A touple which contains the exit code of the command, the whole
     output to stdout and the whole output to stderr.
     '''
-    if not host.isLocalhost():
+    if not host.is_localhost():
         # Connect to a remote host.
         if user == None:
             raise ValueError("A user must be specified for remote connection.")
@@ -62,14 +62,14 @@ def disconnect(host, user=None):
                 conn.disconnect()
                 __connections.remove(conn)
                 
-def disconnectAll():
+def disconnect_all():
     '''
     Disconnects all connection to all hosts.
     '''
     for conn in __connections:
         conn.disconnect()
 
-def isConnected(host, user=None):
+def is_connected(host, user=None):
     '''
     Determines whether there is an active connection to a host as a specific user. If
     no user is given, determines whether there is any connection to that host.
@@ -104,7 +104,7 @@ class fileTypes(object):
     REGULAR="f"
 
 
-def func_fileExists(host, user, path, filetype):
+def func_file_exists(host, user, path, filetype):
     '''
     
     :param host: Host on which to execute the command.
@@ -118,7 +118,7 @@ def func_fileExists(host, user, path, filetype):
     return exitCode == 0
 
 
-def func_directoryEmpty(host, user, path):
+def func_directory_empty(host, user, path):
     '''
     
     :param host: Host on which to execute the command.
@@ -126,10 +126,10 @@ def func_directoryEmpty(host, user, path):
     :param path: The path of the directory.
     :returns: True if the directory is empty, false otherwise.
     '''
-    return len(func_directoryGetFiles(host, user, path)) == 0
+    return len(func_directory_get_files(host, user, path)) == 0
     
     
-def func_directoryGetFiles(host, user, path):
+def func_directory_get_files(host, user, path):
     '''
     
     :param host: Host on which to execute the command.
@@ -146,7 +146,7 @@ def func_directoryGetFiles(host, user, path):
     return stdoutdata.split('\n')
 
 
-def func_createDirectory(host, user, path, createParents):
+def func_create_directory(host, user, path, createParents):
     '''
     
     :param host: Host on which to execute the command.
@@ -160,7 +160,7 @@ def func_createDirectory(host, user, path, createParents):
     args.append[path]
     return execute(host, args, user)
 
-def func_removeDirectory(host, user, path):
+def func_remove_directory(host, user, path):
     '''
     
     :param host: Host on which to execute the command.

@@ -5,33 +5,33 @@ class Event(object):
         self.__handlers = set()
     
     
-    def addHandler(self, handler):
+    def add_handler(self, handler):
         self.__handlers.add(handler)
         
         
-    def removeHandler(self, handler):
+    def remove_handler(self, handler):
         if not handler in self.__handlers:
             raise ValueError("Handler not found.")
         else:
             self.handlers.remove(handler)
             
             
-    def isHandler(self, handler):
+    def has_handler(self, handler):
         return handler in self.__handlers
             
             
-    def countHandlers(self):
+    def count_handlers(self):
         return len(self.__handlers)
             
             
-    def raiseEvent(self, *args, **kargs):
+    def raise_event(self, *args, **kargs):
         for handler in self.__handlers:
             handler(*args, **kargs)
     
     # Override the += operator
-    __iadd__ = addHandler
+    __iadd__ = add_handler
     # Override the -= operator
-    __isub__ = removeHandler
+    __isub__ = remove_handler
     # Called when the event is called with ()
-    __call__ = raiseEvent
-    __len__ = countHandlers
+    __call__ = raise_event
+    __len__ = count_handlers

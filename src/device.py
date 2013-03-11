@@ -18,7 +18,7 @@ class Device(object):
         self.filesystem = filesystem
         self.host = host
         
-    def isAvailable(self, user=None):
+    def is_available(self, user=None):
         '''
         Determines whether the device is available.
         :param user: The user who is to own the process to check the availability.
@@ -26,13 +26,13 @@ class Device(object):
         regardless of the value of the parameter.
         :returns: True if the device is available, otherwise false.
         '''
-        if user == None or self.host.isLocalhost():
+        if user == None or self.host.is_localhost():
             user = getpass.getuser()
             
-        return process.func_fileExists(self.host, user, self.getDeviceFilePath,
+        return process.func_file_exists(self.host, user, self.get_device_file_path,
                                        process.fileTypes.BLOCK_SPECIAL)  
         
-    def getDeviceFilePath(self):
+    def get_device_file_path(self):
         return os.path.join("/dev/disk/by-uuid", self.uuid)
     
     
@@ -58,7 +58,7 @@ class Mountpoint(object):
         self.options = options
         self.create = create
         self.user = user
-        if user == None or host.isLocalhost():
+        if user == None or host.is_localhost():
             self.user = getpass.getuser()
         
         
@@ -70,7 +70,7 @@ class Mountpoint(object):
         do not exist, an exception will be raised.
         '''
         if not self.exists():
-            (exitCode, _, stderrdata) = process.func_createDirectory(self.host, self.user, self.path, 
+            (exitCode, _, stderrdata) = process.func_create_directory(self.host, self.user, self.path, 
                                                                      createParents)
             if exitCode != 0:
                 raise Exception("Creating the mountpoint failed: " + stderrdata)
@@ -82,10 +82,10 @@ class Mountpoint(object):
         try to remove a non-empty or active mountpoint, an exception will be
         raised.
         '''
-        if self.isActive() or not self.isEmpty():
+        if self.is_active() or not self.is_empty():
             raise MountpointBusyError(self)
         
-        (exitCode, _, stderrdata) = process.func_createDirectory(self.host, self.user, self.path)
+        (exitCode, _, stderrdata) = process.func_create_directory(self.host, self.user, self.path)
         if exitCode != 0:
             raise Exception("Removing the mountpoint failed: " + stderrdata)
     
@@ -95,9 +95,9 @@ class Mountpoint(object):
         not exist, an exception is raised. Mounting between hosts is supported.
         :param device: The device to mount.
         '''
-        if self.isEmpty():
+        if self.is_empty():
             raise MountpointNotReadyError(self)
-        if self.isActive():
+        if self.is_active():
             raise MountpointBusyError(self)
 
         # The mount procedure depends on the relation between the host of the device and the host of
@@ -147,7 +147,7 @@ class Mountpoint(object):
             localTempMountpoint.mount(device)
             args = ["sshfs",
                     self.path,
-                    "{0}@{1}:{2}".format(self.user, device.host.getRealIP(), localTempMountpoint.path),
+                    "{0}@{1}:{2}".format(self.user, device.host.get_real_ip(), localTempMountpoint.path),
                     "-o", "idmap=user"]
              
         (exitCode, _, stderrdata) = process.execute(self.host, args, self.user)
@@ -168,9 +168,9 @@ class Mountpoint(object):
         '''
         if self.host != mountpoint.host:
             raise ValueError("Binding mountpoints between hosts is not supported.")
-        if not self.isActive():
+        if not self.is_active():
             raise MountpointNotReadyError(self)
-        if mountpoint.isActive() or not mountpoint.isEmpty():
+        if mountpoint.is_active() or not mountpoint.is_empty():
             raise MountpointBusyError(mountpoint)
         if not mountpoint.exists():
             raise MountpointNotReadyError(mountpoint)
@@ -189,7 +189,7 @@ class Mountpoint(object):
         :param newOptions: The options for the remount, if none are given the
         old options will be used.
         '''
-        if not self.isActive():
+        if not self.is_active():
             raise MountpointNotReadyError(self)
 
         if newOptions == None:
@@ -223,20 +223,20 @@ class Mountpoint(object):
         Determines whether the mountpoint exists.
         :returns: True if the mountpoint exists, False otherwise.
         '''
-        return process.func_fileExists(self.host, self.user, self.path, process.fileTypes.DIRECTORY)    
+        return process.func_file_exists(self.host, self.user, self.path, process.fileTypes.DIRECTORY)    
     
     
-    def isEmpty(self):
+    def is_empty(self):
         '''
         Determines whether the mountpoint is empty. Empty does not mean
         inactive, an active mountpoint may be empty, too.
         :returns: True if the mountpoint is empty, False otherwise.
         '''
-        return process.func_directoryEmpty(self.host, self.user, self.path)
+        return process.func_directory_empty(self.host, self.user, self.path)
     
     
     # Some caching could be implemented.
-    def isActive(self):
+    def is_active(self):
         '''
         Determines whether the mountpoint is active.
         :returns: True if the mountpoint is active, False otherwise.

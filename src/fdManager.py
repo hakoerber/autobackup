@@ -2,15 +2,15 @@ import fcntl
 import os
 import errno
 
-def unblockFileDescriptor(path):
+def unblock_file_descriptor(path):
     fd = path.fileno()
     fl = fcntl.fcntl(fd, fcntl.F_GETFL)
     fcntl.fcntl(fd, fcntl.F_SETFL, fl | os.O_NONBLOCK)
     
-def readAll(path):
+def read_all(path):
     output = []
     while True:
-        line = nonBlockingRead(path)
+        line = non_blocking_read(path)
         if not line:
             break
         else:
@@ -18,13 +18,13 @@ def readAll(path):
     return "".join(output)
 
 
-def nonBlockingReadline(path):
+def non_blocking_readline(path):
     try:
         return path.readline()
     except IOError:
         return ""
     
-def nonBlockingRead(path):
+def non_blocking_read(path):
     try:
         return path.read()
     except IOError:
