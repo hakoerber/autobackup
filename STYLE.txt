@@ -34,10 +34,10 @@ Docstrings
 - The first docstring line should follow the """ without a preceding newline
 - The closing """ should be on a separate line, unless the docstring fits on
   one line, then put the """ at the end of the line
-- Use the following templates in your docstrings to make them useable with
+- Use the following templates in your docstrings to make them usable with
   sphinx:
     :param <parameter name>: <parameter description>
-    :type <parameter name>: <type of the paramter>
+    :type <parameter name>: <type of the parameter>
     :returns: <return value description>
     :rtype: <type of the return value>
     :raises <exception>: <exception cause>
@@ -51,7 +51,7 @@ Naming:
   for class methods
 - use a preceding underscore for every non-public elements of a module or 
   class, things that should not be used outside the module/class, e.g. because 
-  they could interfer with data integrity or change in later versions
+  they could interfere with data integrity or change in later versions
 - use two preceding underscores for everything that should not be inherited to 
   subclasses, as it invokes name mangling
 
