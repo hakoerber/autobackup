@@ -9,22 +9,29 @@ class NetworkConnection(object):
     def __init__(self, host, user, port):
         raise NotImplementedError()
     
+    
     def connect(self, timeout, remoteShell):
-        """Connects to the host as <user> and starts a shell specified by <remoteShell>.
-        Raises a timeout error if <timeout> (in milliseconds) exceeded."""
+        """Connects to the host as <user> and starts a shell specified by 
+        <remoteShell>. Raises a timeout error if <timeout> (in milliseconds) 
+        exceeded."""
         raise NotImplementedError()
+    
     
     def disconnect(self):
         """Disconnects the connection immediately."""
         raise NotImplementedError()
     
+    
     def execute(self, command, timeout):
-        """Executes a <command> on the remote host as user <user>. Raises a timeout error
-        if the command did not finish after <timeout> milliseconds."""
+        """Executes a <command> on the remote host as user <user>. Raises a 
+        timeout error if the command did not finish after <timeout> 
+        milliseconds."""
         raise NotImplementedError()
     
+    
     def is_connected(self):
-        """Returns a bool that specifies whether the connection is established."""
+        """Returns a bool that specifies whether the connection is established.
+        """
         raise NotImplementedError()
         
 
@@ -40,7 +47,8 @@ class SSHNetworkConnection(NetworkConnection):
         
     def __del__(self):
         pass
-        # At this point, the object may already be deleted and disconnect may not be found.
+        # At this point, the object may already be deleted and disconnect may 
+        # not be found.
         #self.diconnect()
     
     
@@ -57,7 +65,8 @@ class SSHNetworkConnection(NetworkConnection):
                 "-x",\
                 "-l", self.user,\
                 self.host.ip,\
-                # Double quotes will automatically be added by subprocess.list2cmdline()
+                # Double quotes will automatically be added by 
+                # subprocess.list2cmdline()
                 'echo {0} ; {1}'.format(connectionID, remoteShell)]
                                        
         self.__sshProcess = subprocess.Popen(args, shell=False, bufsize=-1,\
@@ -81,7 +90,8 @@ class SSHNetworkConnection(NetworkConnection):
         
         connected = False
 
-        # Now we will wait for a line in stdout starting with connectionID or abort when timeout is exceeded
+        # Now we will wait for a line in stdout starting with connectionID or 
+        # abort when timeout is exceeded
         while True:
             poll = poll + 1
             
@@ -112,7 +122,8 @@ class SSHNetworkConnection(NetworkConnection):
             output[i] = "".join(output[i])
             
         if output[1]:
-            raise Exception("Some error orrcured, stderr:\n{0}".format(output[1]))
+            raise Exception(
+                "Some error orrcured, stderr:\n{0}".format(output[1]))
         
         return (output[0],output[1])
     
@@ -141,7 +152,8 @@ class SSHNetworkConnection(NetworkConnection):
         maxPolls = timeout / POLL_INTERVAL
         polls = 0
  
-        command = '{0} ; echo {1}@$?\n'.format(subprocess.list2cmdline(command), commandID)
+        command = '{0} ; echo {1}@$?\n'.format(subprocess.list2cmdline(command),
+                                               commandID)
         self.__sshProcess.stdin.write(command)
         self.__sshProcess.stdin.flush()
         

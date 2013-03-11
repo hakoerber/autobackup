@@ -5,18 +5,18 @@ import datetime
 SUFFIX     = 'bak'
 # Timeformat used by the datetime.strptime() method of 
 TIMEFORMAT = '%Y-%m-%dT%H:%M:%S'
-
 FORMAT     = "{0}.{1}".format(TIMEFORMAT, SUFFIX)
 
 class BackupRepository(object):
-    '''
-    Represents a backup repository, where a number of backups can be stored. Requires information
-    about the expiration of backups and the interval in which backups are to be created. Will raise
-    events accordingly.
-    '''
+    """
+    Represents a backup repository, where a number of backups can be stored. 
+    Requires information about the expiration of backups and the interval in 
+    which backups are to be created. Will raise events accordingly.
+    """
     
-    def __init__(self, host, path, directories, sourceHost, sources, interval, maxCount, maxAge):
-        '''
+    def __init__(self, host, path, directories, sourceHost, sources, interval,
+                 maxCount, maxAge):
+        """
         :param sourceHost:
         The host of the source directories.
         :param sources:
@@ -28,13 +28,14 @@ class BackupRepository(object):
         :param directories:
         The subdirectories of the repository.
         :param interval:
-        An timedelta object describing the desired interval between two backups.
+        An timedelta object describing the desired interval between two 
+        backups.
         :param maxCount:
-        The maximum amount of backups to retain. If this number is exceeded, the oldest
-        backups are to be deleted first.
+        The maximum amount of backups to retain. If this number is exceeded, 
+        the oldest backups are to be deleted first.
         :param maxAge:
         The maximum age of all backups. Older backups are to be deleted.
-        '''
+        """
         
         self.__sourceHost = sourceHost
         self.__sources = sources
@@ -75,17 +76,22 @@ class BackupRepository(object):
                 backupNeeded = False
                 
         if backupNeeded:
-            self._on_backup_required(self.host, self._generate_new_backup_name(), self.__sourceHost, self.__sources)
+            self._on_backup_required(self.host, 
+                                     self._generate_new_backup_name(),
+                                     self.__sourceHost,
+                                     self.__sources)
             
     
     def _initialize_backups(self):
         for directory in self.__directories:
             self.__backups.append(Backup(directory))
             
-    def _on_backup_required(self, host, newBackupDirectoryName, sourceHost, sources):
+    def _on_backup_required(self, host, newBackupDirectoryName, sourceHost,
+                            sources):
         if len(self.backupRequired):
-            self.backupRequired(host, newBackupDirectoryName, sourceHost, sources)
-            
+            self.backupRequired(host, newBackupDirectoryName, sourceHost,
+                                sources)
+          
     def _on_backup_expired(self, host, expiredBackupDirectoryName):
         if len(self.backupExpired):
             self.backupExpired(host, expiredBackupDirectoryName)

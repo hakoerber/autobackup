@@ -28,10 +28,11 @@ class Event(object):
         for handler in self.__handlers:
             handler(*args, **kargs)
     
+    
     # Override the += operator
     __iadd__ = add_handler
     # Override the -= operator
     __isub__ = remove_handler
-    # Called when the event is called with ()
+    # Executed when the event is called with ()
     __call__ = raise_event
     __len__ = count_handlers
