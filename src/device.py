@@ -10,9 +10,12 @@ class Device(object):
     def __init__(self, host, uuid, filesystem):
         """
         :param host: The host of the device.
+        :type host: Host instance
         :param uuid: The UUID of the device.
+        :type uuid: string
         :param filesystem: The filesystem of the device. If you are not sure, 
         try "auto" and mount will try to guess the filesystem.
+        :type filesystem: string
         """
         self.uuid = uuid
         self.filesystem = filesystem
@@ -23,10 +26,11 @@ class Device(object):
         """
         Determines whether the device is available.
         :param user: The user who is to own the process to check the 
-        availability.
-        If the host is the localhost or None is given, the current user will be
-        used regardless of the value of the parameter.
+        availability. If the host is the localhost or None is given, the current
+        user will be  used regardless of the value of this parameter.
+        :type user: string
         :returns: True if the device is available, otherwise false.
+        :rtype: bool
         """
         if user == None or self.host.is_localhost():
             user = getpass.getuser()
@@ -37,6 +41,11 @@ class Device(object):
         
         
     def get_device_file_path(self):
+        """
+        Returns a path pointing to the file representing the device
+        :returns: The path to the device file.
+        :rypte: string
+        """
         return os.path.join("/dev/disk/by-uuid", self.uuid)
     
     
@@ -48,15 +57,20 @@ class Mountpoint(object):
     def __init__(self, host, path, options, create, user=None):
         """
         :param host: The host of the mountpoint.
+        :type host: Host instance
         :param path: The absolute on the specified host.
+        :type path: string
         :param options: A tuple containing all mount options.
+        :type options: tuple
         :param create: A boolean that specifies whether the mountpoint is to be
         created automatically if it does not exist. You can always create the 
-        mountpoint manually with create()
+        mountpoint manually with create().
+        :type create: bool
         :param user: The user who is own all processes spawned by this class. If
         the host is the localhost or None is given, the current user will be 
         used regardless of the value of the parameter, even for remote 
         mountpoints.
+        :type user: string
         """
         self.host = host
         self.path = path
@@ -73,6 +87,8 @@ class Mountpoint(object):
         :param createParents: Specifies whether parent directories of the 
         mountpoint should be created if they do not exist. If False and the 
         parent directories do not exist, an exception will be raised.
+        :type createParents: bool
+        :raises: Exception if creating the mountpoint failed.
         """
         if not self.exists():
             (exitCode, _, stderrdata) = process.func_create_directory(
@@ -89,6 +105,7 @@ class Mountpoint(object):
         """
         Removes the mountpoint if it exists, is empty and not active. If you try
         to remove a non-empty or active mountpoint, an exception will be raised.
+        :raises: Exception if removing the mountpoint failed.
         """
         if self.is_active() or not self.is_empty():
             raise MountpointBusyError(self)
@@ -105,8 +122,12 @@ class Mountpoint(object):
         Mounts a device on the mountpoint. If the mountpoint is active or does
         not exist, an exception is raised. Mounting between hosts is supported.
         :param device: The device to mount.
+        :type device: Device instance
+        :raises: MountpointNotReadyError if the mountpoint is not empty.
+        :raises: MountpointBusyError if the mountpoint is active.
+        :raises: Exception if the mounting failed.
         """
-        if self.is_empty():
+        if not self.is_empty():
             raise MountpointNotReadyError(self)
         if self.is_active():
             raise MountpointBusyError(self)
@@ -179,29 +200,37 @@ class Mountpoint(object):
             raise Exception("Mounting failed: " + stderrdata)
 
     
-    def bind(self, mountpoint, submounts=False):
+    def bind(self, target_mountpoint, submounts=False):
         """
         Binds this mountpoint to another mountpoint if the mountpoint is active.
         If the target mountpoint is active, non-empty or does not exist, or if 
         this mountpoint is not active, an exception will be raised.
         ATTENTION: Binding between different hosts is not supported.
         :param mountpoint: The binding mountpoint.
+        :type mountpoint: Mountpoint instance
         :param submounts: If True, all submounts of this mountpoint will also be
         attached to the binding mountpoint. If False, they will not be 
         available.
+        :type submounts: bool
+        :raises: ValueError if trying to bind between hosts.
+        :raises: MountpointNotReadyError if this mountpoint is active or the
+        target mountpoint does not already exist.
+        :raises: MountpointBusyError if the target mountpoint is active or not
+        empty.
+        :raises: Exception if binding failed.
         """
-        if self.host != mountpoint.host:
+        if self.host != target_mountpoint.host:
             raise ValueError(
                 "Binding mountpoints between hosts is not supported.")
         if not self.is_active():
             raise MountpointNotReadyError(self)
-        if mountpoint.is_active() or not mountpoint.is_empty():
-            raise MountpointBusyError(mountpoint)
-        if not mountpoint.exists():
-            raise MountpointNotReadyError(mountpoint)
+        if target_mountpoint.is_active() or not target_mountpoint.is_empty():
+            raise MountpointBusyError(target_mountpoint)
+        if not target_mountpoint.exists():
+            raise MountpointNotReadyError(target_mountpoint)
         
         args = ["mount", "--rbind" if submounts else "--bind", 
-                self.path, mountpoint.path]
+                self.path, target_mountpoint.path]
         
         (exitCode, _, stderrdata) = process.execute(self.host, args, self.user)
         if exitCode != 0:
@@ -214,6 +243,8 @@ class Mountpoint(object):
         given. If the mountpoint is not active, an exception is raised.
         :param newOptions: The options for the remount, if none are given the
         old options will be used.
+        :type newOptions: tuple
+        :raises: Exception if remounting failed.
         """
         if not self.is_active():
             raise MountpointNotReadyError(self)
@@ -232,6 +263,8 @@ class Mountpoint(object):
         Unmounts the device if the mountpoint is active, otherwise, raises an 
         exception. If unmounting is not possible because the device is busy, an 
         exception is raised.
+        :raises: Exception if unmounting failed.
+        :raises: MountpointNotReadyError if the mountpoint is active.
         """
         if not self.active():
             raise MountpointNotReadyError(self)
@@ -248,6 +281,7 @@ class Mountpoint(object):
         """
         Determines whether the mountpoint exists.
         :returns: True if the mountpoint exists, False otherwise.
+        :rtype: bool
         """
         return process.func_file_exists(self.host, self.user, self.path, 
                                         process.fileTypes.DIRECTORY)    
@@ -258,6 +292,7 @@ class Mountpoint(object):
         Determines whether the mountpoint is empty. Empty does not mean
         inactive, an active mountpoint may be empty, too.
         :returns: True if the mountpoint is empty, False otherwise.
+        :rtype: bool
         """
         return process.func_directory_empty(self.host, self.user, self.path)
     
@@ -267,13 +302,14 @@ class Mountpoint(object):
         """
         Determines whether the mountpoint is active.
         :returns: True if the mountpoint is active, False otherwise.
+        :rtype: bool
         """
         args = ["mount"]
         (_, stdouterror, _) = process.execute(self.host, args, self.user)
         for line in stdouterror.split('\n'):
             # The output of mount has the following layout:
             # <device> on <mountpoint> type <fstype> (<options>)
-            # We want to extract the mountpoint
+            # We want to extract the mountpoint.
             if line.split(' ')[2] == self.path:
                 return True
         return False

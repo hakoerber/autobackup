@@ -10,10 +10,15 @@ class NetworkConnection(object):
         raise NotImplementedError()
     
     
-    def connect(self, timeout, remoteShell):
-        """Connects to the host as <user> and starts a shell specified by 
+    def connect(self, timeout, remote_shell):
+        """
+        Connects to the host as <user> and starts a shell specified by 
         <remoteShell>. Raises a timeout error if <timeout> (in milliseconds) 
-        exceeded."""
+        exceeded.
+        :param timeout: Timeout after which an error is raised.
+        :type timeout: int
+        :param remote_shell: Remote shell that is used to execute the commands.
+        :type remote_shell: string"""
         raise NotImplementedError()
     
     
@@ -23,14 +28,23 @@ class NetworkConnection(object):
     
     
     def execute(self, command, timeout):
-        """Executes a <command> on the remote host as user <user>. Raises a 
+        """
+        Executes a <command> on the remote host as user <user>. Raises a 
         timeout error if the command did not finish after <timeout> 
-        milliseconds."""
+        milliseconds.
+        :param command: The command to execute on the remote host.
+        :type command: string
+        :param timeout: Timeout after which an error is raised.
+        :type timeout: int
+        """
         raise NotImplementedError()
     
     
     def is_connected(self):
-        """Returns a bool that specifies whether the connection is established.
+        """
+        Returns a bool that specifies whether the connection is established.
+        :returns: True if a connection is established, False otherwise.
+        :rtype: bool
         """
         raise NotImplementedError()
         
@@ -52,7 +66,7 @@ class SSHNetworkConnection(NetworkConnection):
         #self.diconnect()
     
     
-    def connect(self, timeout, remoteShell):
+    def connect(self, timeout, remote_shell):
         if self.__sshProcess != None:
             return 
          
@@ -67,7 +81,7 @@ class SSHNetworkConnection(NetworkConnection):
                 self.host.ip,\
                 # Double quotes will automatically be added by 
                 # subprocess.list2cmdline()
-                'echo {0} ; {1}'.format(connectionID, remoteShell)]
+                'echo {0} ; {1}'.format(connectionID, remote_shell)]
                                        
         self.__sshProcess = subprocess.Popen(args, shell=False, bufsize=-1,\
                                              stdout=subprocess.PIPE,\
