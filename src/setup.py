@@ -6,7 +6,7 @@ setup(name='autobackup',
       long_description = open("README.md").read(),
       license = open("LICENSE").read(),
       author = 'Hannes Körber',
-      auther_email = 'hannes.koerber@gmail.com',
+      author_email = 'hannes.koerber@gmail.com',
       url = 'http://github.com/whatevsz/autobackup/',
       packages=['apscheduler']
       )
