@@ -13,7 +13,7 @@ class NetworkConnection(object):
     def connect(self, timeout, remote_shell):
         """
         Connects to the host as <user> and starts a shell specified by 
-        <remoteShell>. Raises a timeout error if <timeout> (in milliseconds) 
+        <remote_shell>. Raises a timeout error if <timeout> (in milliseconds) 
         exceeded.
         :param timeout: Timeout after which an error is raised.
         :type timeout: int
@@ -52,8 +52,8 @@ class NetworkConnection(object):
 class SSHNetworkConnection(NetworkConnection):
     
     def __init__(self, host, user, port):
+        self.port = port
         self.host = host
-        self.__port = port
         self.user = user
         
         self.__sshProcess = None
@@ -74,7 +74,7 @@ class SSHNetworkConnection(NetworkConnection):
         
         args = ["ssh",\
                 "-o", "StrictHostKeyChecking=yes",\
-                "-p", str(self.__port),\
+                "-p", str(self.port),\
                 "-q",\
                 "-x",\
                 "-l", self.user,\
@@ -107,7 +107,7 @@ class SSHNetworkConnection(NetworkConnection):
         # Now we will wait for a line in stdout starting with connectionID or 
         # abort when timeout is exceeded
         while True:
-            poll = poll + 1
+            poll += 1
             
             if poll >= maxPolls:
                 self.disconnect()
@@ -117,11 +117,11 @@ class SSHNetworkConnection(NetworkConnection):
                 lines[i] = fdManager.read_all(stdpipe[i])
                                 
             for i in 0,1:
-                for line in lines[i].split("\n"):
+                for line in lines[i].split('\n'):
                     if line:
                         output[i].append(line)
 
-            for line in lines[0].split("\n"):
+            for line in lines[0].split('\n'):
                 if line.startswith(connectionID):
                     # Connection established
                     connected = True
@@ -172,7 +172,7 @@ class SSHNetworkConnection(NetworkConnection):
         self.__sshProcess.stdin.flush()
         
         while True:
-            polls = polls + 1
+            polls += 1
 
             if polls >= maxPolls:
                 raise Exception("timeout")
@@ -181,7 +181,7 @@ class SSHNetworkConnection(NetworkConnection):
                 lines[i] = fdManager.read_all(stdpipe[i])
                             
             for i in 0,1:
-                for line in lines[i].split("\n"):
+                for line in lines[i].split('\n'):
                     if i == 0 and line.startswith(commandID):
                         lastLine = line
                         finished = True
@@ -194,9 +194,9 @@ class SSHNetworkConnection(NetworkConnection):
             
         for i in 0,1:
             output[i].append(fdManager.read_all(stdpipe[i]))
-            output[i] = "\n".join(output[i])
+            output[i] = '\n'.join(output[i])
             
-        exitCode = lastLine.split("@")[1]
+        exitCode = lastLine.split('@')[1]
                             
         return(exitCode, output[0], output[1])
 

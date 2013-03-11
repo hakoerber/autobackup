@@ -169,7 +169,7 @@ class Mountpoint(object):
             remoteTempMountpoint = Mountpoint(device.host, 
                                               TEMP_MOUNTPOINT_REMOTE,
                                               self.options, 
-                                              create=False, 
+                                              False, 
                                               self.user)
             remoteTempMountpoint.create()
             remoteTempMountpoint.mount(device)
@@ -184,7 +184,7 @@ class Mountpoint(object):
             localTempMountpoint = Mountpoint(device.host, 
                                              TEMP_MOUNTPOINT_REMOTE,
                                              self.options, 
-                                             create=False, 
+                                             False, 
                                              self.user)
             localTempMountpoint.create()
             localTempMountpoint.mount(device)
