@@ -15,21 +15,21 @@ setup(
       description = 'Backup deamon',
       long_description = open("README.md").read(),
      
-      package_dir = {'autobackup': 'src'}, 
+      package_dir = {'autobackup': 'packages'}, 
       packages = ['autobackup', 'tests'],
       scripts = ['scripts/autobackup.py'],
       data_files = [
-          ('cfg', [
-              'cfg/config.draft.xml', 
-              'cfg/config.example.xml',
-              'cfg/config.xsd']),
+          ('config', [
+              'config/config.draft.xml', 
+              'config/config.example.xml',
+              'config/config.xsd']),
           ('', [
               'README.md']),
-          ('doc', [
-              'doc/TODO.txt',
-              'doc/CHANGELOG.txt',
-              'doc/INSTALL.txt',
-              'doc/STYLE.txt'])
+          ('documentation', [
+              'documentation/TODO.txt',
+              'documentation/CHANGELOG.txt',
+              'documentation/INSTALL.txt',
+              'documentation/STYLE.txt'])
           ],
       requires = ['apscheduler (>= 2.0.0)'],
       
