@@ -15,7 +15,7 @@ setup(
       description = 'Backup deamon',
       long_description = open("README.md").read(),
      
-      package_dir = {'autobackup': 'packages'}, 
+#      package_dir = {'autobackup': 'packages'}, 
       packages = ['autobackup', 'tests'],
       scripts = ['scripts/autobackup.py'],
       data_files = [
