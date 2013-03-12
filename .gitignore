@@ -2,7 +2,6 @@
 .project
 .pydevproject
 *.pyc
-src/test.py
 self
 dist/
 build/
