@@ -1,0 +1,10 @@
+./autobackup:
+    Core packages.
+./config:
+    Configuration files for the final application.
+./documentation:
+    ...
+./scripts:
+    Scripts for the final application.
+./tests:
+    Test packages.
