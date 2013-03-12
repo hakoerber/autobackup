@@ -28,6 +28,8 @@ class TestCases(unittest.TestCase):
         self.assertEqual(Host(ip="127.0.0.1"), Host(ip="127.53.1.245"))
 
     def test_get_real_ip(self):
-        #self.assertFalse(Host(ip=self.localhost_ip.get_real_ip()).is_localhost())
+        #self.assertFalse(
+        #    Host(ip=self.localhost_ip.get_real_ip()).is_localhost())
         self.assertRaises(NotImplementedError, self.localhost_ip.get_real_ip)
-        self.assertEqual(self.remotehost_ip.ip, self.remotehost_ip.get_real_ip())
+        self.assertEqual(
+            self.remotehost_ip.ip, self.remotehost_ip.get_real_ip())
