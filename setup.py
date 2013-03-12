@@ -3,6 +3,12 @@ from distutils.core import setup
 
 VERSION = '0.1-dev'
 
+# Look here for additional information about using the setup script:
+# http://docs.python.org/2/distutils/index.html
+# This is a list of all classifiers usable for the classifiers parameter in
+# setup():
+# https://pypi.python.org/pypi?%3Aaction=list_classifiers
+
 setup(
       name='autobackup',
       version = VERSION,

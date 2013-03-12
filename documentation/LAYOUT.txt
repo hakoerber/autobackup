@@ -8,3 +8,8 @@
     Scripts for the final application.
 ./tests:
     Test packages.
+
+Additional sources:
+http://as.ynchrono.us/2007/12/filesystem-structure-of-python-project_21.html
+http://kennethreitz.org/exposures/repository-structure-and-python
+http://www.aaronstannard.com/post/2011/12/18/Project-Scaffolding-for-Python.aspx
