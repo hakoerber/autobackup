@@ -1,4 +1,13 @@
+import os
+
 class Parser(object):
+
+    COMMENT_CHAR  = '#'
+    SECTION_START = '['
+    SECTION_END   = ']'
+    ELEMENT_START = '<'
+    ELEMENT_END   = '>'
+    KEY_VALUE_SEPARATOR = '="
     
     def __init__(self, path):
         self.path = path
@@ -11,6 +20,8 @@ class Parser(object):
     
 
     def read(self):
+        if not os.path.isfile(self.path):
+            raise IOError("File not found.")
         self.text = open(self.path).read()
     
 
@@ -30,33 +41,29 @@ class Parser(object):
             if not line:
                 continue
             # skip comments
-            if line.startswith('#'):
+            if line.startswith(COMMENT_CHAR):
                 continue
             
             # omit comments starting in the middle of the line
-            line = line.split('#')[0]
+            line = line.split(COMMENT_CHAR)[0]
 
             
-            if line.startswith('[') and line.endswith(']'):
+            if line.startswith(SECTION_START) and line.endswith(SECTION_END):
                 current_section = line
-                print "adding new section: " + line
                 self.structure[line] = {}
-                print self.structure
                 continue
-            if line.startswith('<') and line.endswith('>'):
+            if line.startswith(ELEMENT_START) and line.endswith(ELEMENT_END):
                 if not current_section:
                     raise ParseError(lineno, line, "Element without associated section.")
                 current_element = line
-                print "adding new element {} in section {}".format(line, current_section)
                 self.structure[current_section][line] = {}
-                print self.structure
                 continue
             if '=' in line[1:-1]:
                 if not current_section:
                     raise ParseError(lineno, line, "Key without associated section.")
                 if not current_element or not current_element in self.structure[current_section]:
                     raise ParseError(lineno, line, "Key without associated element.")
-                key_value = line.split('=')
+                key_value = line.split(KEY_VALUE_SEPARATOR)
                 if len(key_value) != 2:
                     raise ParseError(line, "Invalid line")
                 key, value = key_value
@@ -64,10 +71,7 @@ class Parser(object):
                 value = value.strip()
                 if not current_element in self.structure[current_section]:
                     raise ParseError(lineno, line, "Element without associated section")                    
-                print "adding new key {} with value {} in element {} in section {}".format(
-                    key, value, current_element, current_section)
-                self.structure[current_section][current_element][key] = value
-                print self.structure
+                self.structure[current_section][current_element][key] = valuepr
             else:
                 raise ParseError(lineno, line, "Invalid line")
 
