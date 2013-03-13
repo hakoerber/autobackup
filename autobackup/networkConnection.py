@@ -1,7 +1,8 @@
+import time
 import subprocess
+
 import idGenerator
 import fdManager
-import time
 
 class NetworkConnection(object):
     """Abstract base class representing a network connection."""

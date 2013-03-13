@@ -1,11 +1,57 @@
 import event
-import apscheduler.scheduler as scheduler # @UnresolvedImport
 import datetime
+
+import apscheduler.scheduler as scheduler # @UnresolvedImport
 
 SUFFIX     = 'bak'
 # Timeformat used by the datetime.strptime() method of 
 TIMEFORMAT = '%Y-%m-%dT%H:%M:%S'
 FORMAT     = "{0}.{1}".format(TIMEFORMAT, SUFFIX)
+
+class BackupManager(object):
+    """
+    Represents a collection of backup repositories. Provides methods to poll
+    whether new backups are needed or old backups are expired. Can also poll
+    automatically in certain intervals.
+    """
+    
+    def __init__(self, backupRepositories):
+        """
+        :param backupRepositories: A list of backupRepositories to 
+        manage.
+        :type backupRepositories: list of BackupRepository instances
+        """
+        self.backupRepositories = backupRepositories
+        
+        # We will just handle all events raised by the backupRepositories and
+        # re-raise them with the same information.
+        self.backup_required = event.Event()
+        self.backup_expired = event.Event()
+        for backupRepository in backupRepositories:
+            backupRepository.backup_required += self._backup_required_handler
+            backupRepository.backup_expired  += self._backup_expired_handler
+
+        self._scheduler = scheduler.Scheduler()
+        self._scheduler.add_cron_job(self._minute_elapsed, minute='*')
+        self._scheduler.start()
+        
+        
+    def _minute_elapsed(self):
+        for backupRepository in self.backupRepositories:
+            backupRepository.check_backups()
+        
+        
+    def _backup_required_handler(self, *args):
+        self._on_backup_required(*args)
+    
+    def _backup_expired_handler(self, *args):
+        self._on_backup_expired(*args)
+                    
+                    
+    on_backup_required = BackupRepository._on_backup_required    
+    on_backup_expired = BackupRepository._on_backup_expired
+
+
 
 class BackupRepository(object):
     """
@@ -48,22 +94,14 @@ class BackupRepository(object):
         self.__maxCount = maxCount
         self.__maxAge = maxAge
         
-        self.backupExpired = event.Event()
-        self.backupRequired = event.Event()
-        
-        self.__scheduler = scheduler.Scheduler()
-        self.__scheduler.add_cron_job(self._minute_elapsed, minute='*')
-        self.__scheduler.start()
-        
+        self.backup_required = event.Event()
+        self.backup_expired = event.Event()
+            
         maxCountAge = maxCount * interval
         self.__maxAge = maxCountAge if maxCountAge > maxAge else maxAge
         
-
-    def _minute_elapsed(self):
-        self._check_backups()
     
-    
-    def _check_backups(self):
+    def check_backups(self):
         maxBirth = datetime.datetime.now() - self.__maxAge
         minBirth = datetime.datetime.now() - self.__interval
         
@@ -86,18 +124,18 @@ class BackupRepository(object):
         for directory in self.__directories:
             self.__backups.append(Backup(directory))
             
+            
     def _on_backup_required(self, host, newBackupDirectoryName, sourceHost,
                             sources):
         if len(self.backupRequired):
             self.backupRequired(host, newBackupDirectoryName, sourceHost,
                                 sources)
           
+          
     def _on_backup_expired(self, host, expiredBackupDirectoryName):
         if len(self.backupExpired):
             self.backupExpired(host, expiredBackupDirectoryName)
-    
-    def _generate_new_backup_name(self):
-        raise NotImplementedError()
+            
     
     
 class Backup(object):
