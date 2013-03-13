@@ -40,19 +40,19 @@ class Parser(object):
                 line = line.split(char)[0]
             if not line:
                 continue
-            if any([(line[0], line[-1]) == pair for pair in self.section_pairs])1
+            if any([(line[0], line[-1]) == pair for pair in self.section_pairs]):
                 current_section = line
                 self.structure[line] = {}
                 continue
-            elif any([(line[0], line[-1]) == pair for pair in self.element_pairs])
+            elif any([(line[0], line[-1]) == pair for pair in self.element_pairs]):
                 if not current_section:
                     raise ParseError(lineno, line, "Element without associated section.")
                 current_element = line
                 self.structure[current_section][current_element] = {}
                 continue
             elif any(sep in line for sep in self.key_value_separators):
-                if any([line.startswith(sep[0] for sep in self.key_value_separators]):
-                    raise ParseError(lineno, line, "Missing key."
+                if any([line.startswith(sep[0]) for sep in self.key_value_separators]):
+                    raise ParseError(lineno, line, "Missing key.")
                 if sum([line.count(sub) for sub in self.key_value_separators]) > 1:
                     raise ParseError(lineno, line, "Ambiguous line.")
                 if not current_section:
@@ -65,6 +65,8 @@ class Parser(object):
                 self.structure[current_section][current_element][key.strip()] = value.strip()
             else:
                 raise ParseError(lineno, line, "Invalid line")
+            
+        return self.structure
 
 
             
