@@ -2,18 +2,20 @@ import os
 
 class Parser(object):
 
-    COMMENT_CHARS = ('#', ';')
-    SECTION_PAIRS = [('[', ']')]
-    ELEMENT_PAIRS = [('<', '>')]
-    KEY_VALUE_SEPARATORS = ('=', ':')
+    #COMMENT_CHARS = ('#', ';')
+    #SECTION_PAIRS = [('[', ']')]
+    #ELEMENT_PAIRS = [('<', '>')]
+    #KEY_VALUE_SEPARATORS = ('=', ':')
     
-    def __init__(self, path):
+    def __init__(self, path, comment_chars, section_pairs, element_pairs, 
+                 key_value_separators):
         self.path = path
+        self.comment_chars = comment_chars
+        self.section_pairs = section_pairs
+        self.element_pairs = element_pairs
+        self.key_value_separators = key_value_separators
+
         self.text = None
-        # dictionary of (string, dictionary of (string, dictionary of (string, string))):
-        # outer list: sections name and elements
-        # inner list: element names and sections
-        # dictionary: key-value pairs of the element
         self.structure = dict()
     
 
@@ -29,36 +31,35 @@ class Parser(object):
 
         current_section = ""
         current_element = ""
-
         lineno = 0
             
         for line in self.text.split('\n'):
             lineno += 1
             line = line.strip()
-            for char in COMMENT_CHARS:
+            for char in self.comment_chars:
                 line = line.split(char)[0]
             if not line:
                 continue
-            if any([(line[0], line[-1]) == pair for pair in SECTION_PAIRS])
+            if any([(line[0], line[-1]) == pair for pair in self.section_pairs])1
                 current_section = line
                 self.structure[line] = {}
                 continue
-            elif any([(line[0], line[-1]) == pair for pair in ELEMENT_PAIRS])
+            elif any([(line[0], line[-1]) == pair for pair in self.element_pairs])
                 if not current_section:
                     raise ParseError(lineno, line, "Element without associated section.")
                 current_element = line
                 self.structure[current_section][current_element] = {}
                 continue
-            elif any(sep in line for sep in KEY_VALUE_SEPARATORS):
-                if any([line.startswith(sep[0] for sep in KEY_VALUE_SEPARATORS]):
+            elif any(sep in line for sep in self.key_value_separators):
+                if any([line.startswith(sep[0] for sep in self.key_value_separators]):
                     raise ParseError(lineno, line, "Missing key."
-                if sum([line.count(sub) for sub in KEY_VALUE_SEPARATORS]) > 1:
+                if sum([line.count(sub) for sub in self.key_value_separators]) > 1:
                     raise ParseError(lineno, line, "Ambiguous line.")
                 if not current_section:
                     raise ParseError(lineno, line, "Key without associated section.")
                 if not current_element or not current_element in self.structure[current_section]:
                     raise ParseError(lineno, line, "Key without associated element.")
-                key, value = line.split(filter(lambda sep: sep in line, KEY_VALUE_SEPARATORS)[0])
+                key, value = line.split(filter(lambda sep: sep in line, self.key_value_separators)[0])
                 if not current_element in self.structure[current_section]:
                     raise ParseError(lineno, line, "Element without associated section")                    
                 self.structure[current_section][current_element][key.strip()] = value.strip()
