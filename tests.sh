@@ -10,5 +10,5 @@ TESTPATTERN='test_*.py'
 PYTHONPATH="$ROOTDIR/$PKGSDIR" \
 python -m unittest discover \
 --start-directory "$ROOTDIR/$TESTDIR" \
---pattern "$TESTPATTERN"
+--pattern "$TESTPATTERN" \
 --top-level-directory "$ROOTDIR"
