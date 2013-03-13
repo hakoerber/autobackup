@@ -6,3 +6,4 @@ self
 dist/
 build/
 MANIFEST
+.settings/
