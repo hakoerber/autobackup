@@ -103,13 +103,11 @@ class BackupRepository(object):
 class Backup(object):
     
     def __init__(self, directoryName):
-        self.__directoryName = directoryName
-        self.birth = self._get_date(self.__directoryName)
+        self.directoryName = directoryName
+        (self.birth,) = self._parse_name(directoryName)
 
-    def _get_date(self, name):
-        self.birth = datetime.datetime.strptime(name.split('.')[0])
-        
-    def _get_directory_name(self):
-        return self.__directoryName
-    directoryName = property(_get_directory_name)
+    def _parse_name(self, name):
+        if not name.endswith(".{}".format(SUFFIX)):
+            raise ValueError("Invalid extension.")
+        return (datetime.datetime.strptime(name.split('.')[0], TIMEFORMAT),)
         
