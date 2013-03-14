@@ -1,5 +1,8 @@
 import socket
 
+def get_localhost():
+    return Host(ip="127.0.0.1")
+
 class Host(object):
     """A host in a network, identified by his hostname or an ip address"""
     
