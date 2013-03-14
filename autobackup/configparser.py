@@ -60,6 +60,10 @@ class Parser(object):
                 if not current_element or not current_element in self.structure[current_section]:
                     raise ParseError(lineno, line, "Key without associated element.")
                 key, value = line.split(filter(lambda sep: sep in line, self.key_value_separators)[0])
+                if not key.strip():
+                    raise ParseError(lineno, line, "Empty key.")
+                if key.strip() in self.structure[current_section][current_element]:
+                    raise ParseError(lineno, line, "Found key twice in the same element.")
                 if not current_element in self.structure[current_section]:
                     raise ParseError(lineno, line, "Element without associated section")                    
                 self.structure[current_section][current_element][key.strip()] = value.strip()
