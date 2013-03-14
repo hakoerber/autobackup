@@ -41,12 +41,12 @@ def main():
     # mapping: name -> (device instance, mountpoint instance)
     devices = {}
     for key, value in config_structure["[devices]"].iteritems():
-        host =hosts['<' + value["host"] + '>']
-        devices[key] = [device.Device(host=host,
+        device_host = hosts['<' + value["host"] + '>']
+        devices[key] = [device.Device(host=device_host,
                                       uuid=value["uuid"],
                                       filesystem=value["filesystem"]
                                       ),
-                        device.Mountpoint(host=host
+                        device.Mountpoint(host=device_host,
                                           path=value["mountpoint"],
                                           options=value["mount_options"].
                                               split(','),
@@ -59,9 +59,9 @@ def main():
     # to_device, to_host, crontabs[], max_age, max_count)
     backups = {}
     for key, value in config_structure["[backups]"].iteritems():
-        (from_path, from_device, from_host) = _get_path_info(hosts, devices,
+        (from_device, from_path, from_host) = _get_path_info(hosts, devices,
                                                              value["from"])
-        (to_path,   to_device,   to_host  ) = _get_path_info(hosts, devices,
+        (to_device,   to_path,   to_host  ) = _get_path_info(hosts, devices,
                                                              value["to"])
         cronstrings = value["create_at"]
         cronjobs = [cron.Cronjob(cronstr) for cronstr in cronstrings.split(';')]
@@ -84,8 +84,8 @@ def main():
     # repositories are stored at
     repo_mountpoints = []
     for backup in backups.itervalues():
-        device = backup[6][0]
-        mountpoint = backup[6][1]
+        backup_device = backup[5][0]
+        mountpoint = backup[5][1]
         repo_mountpoints.append(mountpoint)
         if not mountpoint.exists() and not mountpoint.mountpoint_create:
             _exit_with(1,
@@ -93,7 +93,7 @@ def main():
                 format(mountpoint.path))
         if not mountpoint.exists():
             mountpoint.create()
-        mountpoint.mount(device=device)
+        mountpoint.mount(device=backup_device)
 
     # read backup repositories and handle their events
 
