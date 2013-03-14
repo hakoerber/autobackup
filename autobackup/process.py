@@ -39,7 +39,7 @@ def execute(host, args, user=None):
             raise ValueError("A user must be specified for remote connection.")
         connection = _getConnection(host, user)
     
-        if not connection.connected():
+        if not connection.is_connected():
             connection.connect(CONNECTION_TIMEOUT, CONNECTION_REMOTE_SHELL)
         
             (exitCode, stdoutdata, stderrdata) = connection.execute(
