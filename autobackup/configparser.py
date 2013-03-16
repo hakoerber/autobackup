@@ -8,12 +8,13 @@ class Parser(object):
     #KEY_VALUE_SEPARATORS = ('=', ':')
     
     def __init__(self, path, comment_chars, section_pairs, element_pairs, 
-                 key_value_separators):
+                 key_value_separators, multiple_keys):
         self.path = path
         self.comment_chars = comment_chars
         self.section_pairs = section_pairs
         self.element_pairs = element_pairs
         self.key_value_separators = key_value_separators
+        self.multiple_keys = multiple_keys
 
         self.text = None
         self.structure = dict()
@@ -63,10 +64,18 @@ class Parser(object):
                 if not key.strip():
                     raise ParseError(lineno, line, "Empty key.")
                 if key.strip() in self.structure[current_section][current_element]:
-                    raise ParseError(lineno, line, "Found key twice in the same element.")
-                if not current_element in self.structure[current_section]:
-                    raise ParseError(lineno, line, "Element without associated section")                    
-                self.structure[current_section][current_element][key.strip()] = value.strip()
+                    if self.multiple_keys:
+                        values = self.structure[current_section][current_element][key.strip()]
+                        if type(values) is str:
+                            values = [values]
+                        values.append(value.strip())
+                        self.structure[current_secion][current_element][key.strip()] = values
+                    else:
+                        raise ParseError(lineno, line, "Found key twice in the same element.")
+                else:
+                    if not current_element in self.structure[current_section]:
+                        raise ParseError(lineno, line, "Element without associated section")                    
+                    self.structure[current_section][current_element][key.strip()] = value.strip()
             else:
                 raise ParseError(lineno, line, "Invalid line")
             
