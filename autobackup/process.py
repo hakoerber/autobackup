@@ -211,3 +211,25 @@ def func_remove_directory(host, user, path):
     args = ["rmdir", path]
     return execute(host, args, user)
     
+def func_create_backup(source_locations, target_location, hardlink_to):
+    if not source_location.is_localhost() and \
+            any([not loc.host.is_localhost() for loc in source_locations]):
+        raise Exception("Either source or location must be local.")     
+    args = ["rsync"]
+    if latestBackup == None:
+        linkDest=""
+    else:
+        linkDest=("--link-dest", latestBackup.path)        
+    args.extend(linkDest)
+    destination_string = target_location.get_ssh_string()
+    # We have to rsync every source location on their own, as all source args 
+    # for rsync must come from the same machine
+    for source in source_locations:
+        source_string = source.get_ssh_string()
+        (exit_code, _, stderrdata) =\
+            execute([args, source_string, destination_string])
+        if exit_code != 0:
+            print "Backup from {0} to {1} failed:\n{2}".format(
+                source_string, destination_string, stderrdata)
+        
+    
