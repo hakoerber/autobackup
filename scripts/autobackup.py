@@ -1,11 +1,14 @@
 #!/usr/bin/env python
+import os
 import sys
+import getpass
 
 import configparser
 import host
-import device
+import filesystem
 import cron
-import backupRepository
+import backuprepository
+import process
 
 
 
@@ -18,7 +21,8 @@ def main():
                                  comment_chars = ('#',),
                                  section_pairs = (('[', ']'),),
                                  element_pairs = (('<', '>'),),
-                                 key_value_separators = ('=',)
+                                 key_value_separators = ('=',),
+                                 multiple_keys = True
                                  )
     try:
         parser.read()
@@ -39,65 +43,66 @@ def main():
 
 
     # mapping: name -> (device instance, mountpoint instance)
+    # TODO determine user
     devices = {}
     for key, value in config_structure["[devices]"].iteritems():
         device_host = hosts['<' + value["host"] + '>']
-        devices[key] = [device.Device(host=device_host,
-                                      uuid=value["uuid"],
-                                      filesystem=value["filesystem"]
-                                      ),
-                        device.Mountpoint(host=device_host,
-                                          path=value["mountpoint"],
-                                          options=value["mount_options"].
-                                              split(','),
-                                          create=_get_bool(
-                                              value["create_mountpoint"])
-                                          )
-                        ]
+        devices[key] = [filesystem.Device(host=device_host,
+                                          uuid=value["uuid"],
+                                          filesystem=value["filesystem"],
+                                          user=None),
+                        filesystem.Mountpoint(host=device_host,
+                                              path=value["mountpoint"],
+                                              options=value["mount_options"].
+                                                  split(','),
+                                              create_if_not_existent=_get_bool(
+                                                  value["create_mountpoint"]),
+                                              user=None)]
 
-    # mapping: name -> (user, from_path, from_device, from_host, to_path,
-    # to_device, to_host, crontabs[], max_age, max_count)
+    # mapping: name -> (repo_location, source_locations[], cronjobs[], max_age,
+    # max_count)
     backups = {}
     for key, value in config_structure["[backups]"].iteritems():
-        (from_device, from_path, from_host) = _get_path_info(hosts, devices,
-                                                             value["from"])
-        (to_device,   to_path,   to_host  ) = _get_path_info(hosts, devices,
-                                                             value["to"])
+        repo_location = _parse_full_location(hosts, devices, value["to"])
+        source_locations = [_get_path_info(hosts, devices, source_string) for
+            source_string in value["from"]]
         cronstrings = value["create_at"]
-        cronjobs = [cron.Cronjob(cronstr) for cronstr in cronstrings.split(';')]
+        cronjobs = [cron.Cronjob(cronstr) for 
+            cronstr in value["create_at"].split(';')]
 
-        backups[key] = (value["user"],
-                        from_path,
-                        from_device,
-                        from_host,
-                        to_path,
-                        to_device,
-                        to_host,
+        backups[key] = (repo_location,
+                        source_locations,
                         cronjobs,
                         value["max_age"],
-                        value["max_count"]
-                        )
-
+                        value["max_count"])
 
 
     # mount the appropriate devices if they are devices where backup
     # repositories are stored at
     repo_mountpoints = []
     for backup in backups.itervalues():
-        backup_device = backup[5][0]
-        mountpoint = backup[5][1]
-        repo_mountpoints.append(mountpoint)
-        if not mountpoint.exists() and not mountpoint.mountpoint_create:
-            _exit_with(1,
-                "Mountpoint {} does not exist, but shall no be crated".
-                format(mountpoint.path))
-        if not mountpoint.exists():
-            mountpoint.create()
-        mountpoint.mount(device=backup_device)
-
+        repo_location = backup[0]
+        if repo_location.device is not None:
+            repo_location.mount()
+                        
     # read backup repositories and handle their events
-
-    manager = backupRepository.BackupManager()
+    backup_repositories = []
+    for backup in backups.itervalues():
+        repository_location = backup[0]
+        directories = process.func_directory_get_files(
+            host=repository_location.host,
+            user=repository_location.user,
+            path=repository_location.path)
+        backup_repositories.append(
+            backuprepository.BackupRepository(
+                    repository_location=repository_location,
+                    directories=directories,
+                    source_locations=backup[1],
+                    interval=cronjobs,
+                    maxAge=backup[3],
+                    maxCount=backup[4]))
+                    
+    manager = backupRepository.BackupManager(backup_repositories)
     manager.backup_required += _backup_required_handler
     manager.backup_expired  += _backup_expired_handler
 
@@ -112,11 +117,14 @@ def main():
     # create backup
     # unmount devices
 
-def _backup_required_handler(host, newBackupDirectoryName, sourceHost, sources):
-    pass
+def _backup_required_handler(repository_location, source_locations, 
+                             latest_backup):
+    # We just need to copy the sources to the new directory.
+    process.func_create_backup(source_locations, repository_location, 
+                               latest_backup)
 
 
-def _backup_expired_handler(host, expiredBackupDirectoryName):
+def _backup_expired_handler(backup_location):
     pass
 
 
@@ -138,11 +146,15 @@ def _get_path_info(hosts, devices, path):
     except KeyError as e:
         print "Unknown device {}.".format(path_device)
         sys.exit(1)
-    try:
-        temp[2] = hosts['<' + temp[2] + '>'] if temp[2] else host.get_localhost()
-    except KeyError as e:
-        print "Unknown host {}.".format(path_host)
-        sys.exit(1)
+    if temp[2]:
+        try:
+            temp[2] = hosts['<' + temp[2] + '>']
+        except KeyError as e:
+            print "Unknown host {}.".format(path_host)
+            sys.exit(1)
+    else:
+        temp[2] = host.get_localhost()
+
     return temp
 
 
@@ -152,12 +164,22 @@ def _exit_with(exit_code, message):
 
 
 def _get_bool(boolstr):
-    if boolstr.lower() in ["true", "1", "yes"]:
+    if boolstr.lower() in ["true", "1", "yes", "wouldbenice"]:
         return True
-    elif boolstr.lower() in ["false", "0", "no"]:
+    elif boolstr.lower() in ["false", "0", "no", "idareyou"]:
         return False
     raise ValueError("{} is not a boolean value.".format(boolstr))
 
 
+def _parse_full_location(string, hosts, devices):#
+    # when no user, use current one!
+    # TODO implement
+    return None
+
+
 if __name__ == '__main__':
     main()
+
+
+
+
