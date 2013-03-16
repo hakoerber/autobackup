@@ -1,11 +1,10 @@
 import fcntl
 import os
-import errno
 
 def unblock_file_descriptor(path):
-    fd = path.fileno()
-    fl = fcntl.fcntl(fd, fcntl.F_GETFL)
-    fcntl.fcntl(fd, fcntl.F_SETFL, fl | os.O_NONBLOCK)
+    file_descriptor = path.fileno()
+    file_control = fcntl.fcntl(file_descriptor, fcntl.F_GETFL)
+    fcntl.fcntl(file_descriptor, fcntl.F_SETFL, file_control | os.O_NONBLOCK)
     
 def read_all(path):
     output = []

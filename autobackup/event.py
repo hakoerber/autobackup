@@ -2,34 +2,34 @@ class Event(object):
     """C#-like Event class with multiple handlers."""
     
     def __init__(self):
-        self.__handlers = set()
+        self.handlers = set()
     
     
     def add_handler(self, handler):
-        self.__handlers.add(handler)
+        self.handlers.add(handler)
         
         
     def remove_handler(self, handler):
-        if not handler in self.__handlers:
+        if not handler in self.handlers:
             raise ValueError("Handler not found.")
         else:
             self.handlers.remove(handler)
             
             
     def has_handler(self, handler):
-        return handler in self.__handlers
+        return handler in self.handlers
             
             
     def count_handlers(self):
-        return len(self.__handlers)
+        return len(self.handlers)
             
             
     def raise_event(self, *args, **kargs):
-        for handler in self.__handlers:
+        for handler in self.handlers:
             handler(*args, **kargs)
     
     
-    # Override the += operator
+    # Overrride the += operator
     __iadd__ = add_handler
     # Override the -= operator
     __isub__ = remove_handler

@@ -53,11 +53,12 @@ class NetworkConnection(object):
 class SSHNetworkConnection(NetworkConnection):
     
     def __init__(self, host, user, port):
+        super(SSHNetworkConnection, self).__init__(host, user, port)
         self.port = port
         self.host = host
         self.user = user
         
-        self.__sshProcess = None
+        self.ssh_process = None
         
         
     def __del__(self):
@@ -68,62 +69,62 @@ class SSHNetworkConnection(NetworkConnection):
     
     
     def connect(self, timeout, remote_shell):
-        if self.__sshProcess != None:
+        if self.ssh_process != None:
             return 
          
-        connectionID = idgenerator.generate_id(20)
+        connection_id = idgenerator.generate_id(20)
         
-        args = ["ssh",\
-                "-o", "StrictHostKeyChecking=yes",\
-                "-p", str(self.port),\
-                "-q",\
-                "-x",\
-                "-l", self.user,\
-                self.host.ip,\
+        args = ["ssh", \
+                "-o", "StrictHostKeyChecking=yes", \
+                "-p", str(self.port), \
+                "-q", \
+                "-x", \
+                "-l", self.user, \
+                self.host.ip, \
                 # Double quotes will automatically be added by 
                 # subprocess.list2cmdline()
-                'echo {0} ; {1}'.format(connectionID, remote_shell)]
+                'echo {0} ; {1}'.format(connection_id, remote_shell)]
                                        
-        self.__sshProcess = subprocess.Popen(args, shell=False, bufsize=-1,\
-                                             stdout=subprocess.PIPE,\
-                                             stderr=subprocess.PIPE,\
+        self.ssh_process = subprocess.Popen(args, shell=False, bufsize=-1, \
+                                             stdout=subprocess.PIPE, \
+                                             stderr=subprocess.PIPE, \
                                              stdin=subprocess.PIPE)        
         
         # We will poll the process output once every 100 ms 
         POLL_INTERVAL = 100
-        maxPolls = timeout / POLL_INTERVAL
+        max_polls = timeout / POLL_INTERVAL
         poll = 0
         
         # 0: stdout, 1: stderr
-        stdpipe = (self.__sshProcess.stdout, self.__sshProcess.stderr)
-        output = [[],[]]
-        lines = [[],[]]
+        stdpipe = (self.ssh_process.stdout, self.ssh_process.stderr)
+        output = [[], []]
+        lines = [[], []]
         
         # Unblock pipes so read() and readline() does not block
-        for i in 0,1:
+        for i in 0, 1:
             fdmanager.unblock_file_descriptor(stdpipe[i])
         
         connected = False
 
-        # Now we will wait for a line in stdout starting with connectionID or 
+        # Now we will wait for a line in stdout starting with connection_id or 
         # abort when timeout is exceeded
         while True:
             poll += 1
             
-            if poll >= maxPolls:
+            if poll >= max_polls:
                 self.disconnect()
                 raise Exception("timeout")
                         
-            for i in 0,1:
+            for i in 0, 1:
                 lines[i] = fdmanager.read_all(stdpipe[i])
                                 
-            for i in 0,1:
+            for i in 0, 1:
                 for line in lines[i].split('\n'):
                     if line:
                         output[i].append(line)
 
             for line in lines[0].split('\n'):
-                if line.startswith(connectionID):
+                if line.startswith(connection_id):
                     # Connection established
                     connected = True
                     
@@ -132,59 +133,59 @@ class SSHNetworkConnection(NetworkConnection):
             
             time.sleep(POLL_INTERVAL/1000.0)
             
-        for i in 0,1:
+        for i in 0, 1:
             output[i].append(fdmanager.read_all(stdpipe[i]))
             output[i] = "".join(output[i])
             
         if output[1]:
             raise Exception(
-                "Some error orrcured, stderr:\n{0}".format(output[1]))
+                "Some error occured, stderr:\n{0}".format(output[1]))
         
-        return (output[0],output[1])
+        return (output[0], output[1])
     
              
     def disconnect(self):
-        if self.__sshProcess != None:
-            self.__sshProcess.terminate()
-            self.__sshProcess = None    
+        if self.ssh_process != None:
+            self.ssh_process.terminate()
+            self.ssh_process = None    
     
     
     def execute(self, command, timeout):
-        commandID = idgenerator.generate_id(20)
-        stdpipe = (self.__sshProcess.stdout, self.__sshProcess.stderr)
+        command_id = idgenerator.generate_id(20)
+        stdpipe = (self.ssh_process.stdout, self.ssh_process.stderr)
         
         # Flush streams as precaution
-        for i in 0,1:
+        for i in 0, 1:
             stdpipe[i].flush()
                          
-        output = [[],[]]
-        lines = [[],[]]
+        output = [[], []]
+        lines = [[], []]
         
-        lastLine = None
+        last_line = None
         finished = False
         
         POLL_INTERVAL = 100
-        maxPolls = timeout / POLL_INTERVAL
+        max_polls = timeout / POLL_INTERVAL
         polls = 0
  
         command = '{0} ; echo {1}@$?\n'.format(subprocess.list2cmdline(command),
-                                               commandID)
-        self.__sshProcess.stdin.write(command)
-        self.__sshProcess.stdin.flush()
+                                               command_id)
+        self.ssh_process.stdin.write(command)
+        self.ssh_process.stdin.flush()
         
         while True:
             polls += 1
 
-            if polls >= maxPolls:
+            if polls >= max_polls:
                 raise Exception("timeout")
                                     
-            for i in 0,1:
+            for i in 0, 1:
                 lines[i] = fdmanager.read_all(stdpipe[i])
                             
-            for i in 0,1:
+            for i in 0, 1:
                 for line in lines[i].split('\n'):
-                    if i == 0 and line.startswith(commandID):
-                        lastLine = line
+                    if i == 0 and line.startswith(command_id):
+                        last_line = line
                         finished = True
                     elif line:
                         output[i].append(line)
@@ -193,14 +194,14 @@ class SSHNetworkConnection(NetworkConnection):
                 break
             time.sleep(POLL_INTERVAL/1000.0)
             
-        for i in 0,1:
+        for i in 0, 1:
             output[i].append(fdmanager.read_all(stdpipe[i]))
             output[i] = '\n'.join(output[i])
             
-        exitCode = lastLine.split('@')[1]
+        exit_code = last_line.split('@')[1]
                             
-        return(exitCode, output[0], output[1])
+        return(exit_code, output[0], output[1])
 
 
     def is_connected(self):
-        return self.__sshProcess != None
+        return self.ssh_process != None

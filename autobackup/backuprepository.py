@@ -1,8 +1,8 @@
-import event
 import datetime
-import filesystem
 
 import apscheduler.scheduler as scheduler # @UnresolvedImport
+
+import event
 
 SUFFIX     = 'bak'
 # Timeformat used by the datetime.strptime() method of 
@@ -16,21 +16,21 @@ class BackupManager(object):
     automatically in certain intervals.
     """
     
-    def __init__(self, backupRepositories):
+    def __init__(self, backup_repositories):
         """
         :param backupRepositories: A list of backupRepositories to 
         manage.
         :type backupRepositories: list of BackupRepository instances
         """
-        self.backupRepositories = backupRepositories
+        self.backupRepositories = backup_repositories
         
         # We will just handle all events raised by the backupRepositories and
         # re-raise them with the same information.
         self.backup_required = event.Event()
         self.backup_expired = event.Event()
-        for backupRepository in backupRepositories:
-            backupRepository.backup_required += self._backup_required_handler
-            backupRepository.backup_expired  += self._backup_expired_handler
+        for repository in backupRepositories:
+            repository.backup_required += self._backup_required_handler
+            repository.backup_expired  += self._backup_expired_handler
 
         self._scheduler = scheduler.Scheduler()
         self._scheduler.add_cron_job(self._minute_elapsed, minute='*')
@@ -38,14 +38,14 @@ class BackupManager(object):
         
         # Quite shitty, have to figure out how to assign the methods on a class
         # level without reordering the classes.
-        self.on_backup_required = BackupRepository._on_backup_required    
-        self.on_backup_expired = BackupRepository._on_backup_expired
+        self._on_backup_required = BackupRepository._on_backup_required    
+        self._on_backup_expired = BackupRepository._on_backup_expired
 
         
         
     def _minute_elapsed(self):
-        for backupRepository in self.backupRepositories:
-            backupRepository.check_backups()
+        for repository in self.backup_repositories:
+            repository.check_backups()
         
         
     def _backup_required_handler(self, *args):
@@ -53,8 +53,6 @@ class BackupManager(object):
     
     def _backup_expired_handler(self, *args):
         self._on_backup_expired(*args)
-                    
-
 
 
 
@@ -68,7 +66,7 @@ class BackupRepository(object):
     def __init__(self, 
                  repository_location, repository_directories,
                  source_locations,
-                 interval, maxCount, maxAge):
+                 interval, max_count, max_age):
         """
         :param sourceHost:
         The host of the source directories.
@@ -95,14 +93,14 @@ class BackupRepository(object):
         self.source_locations = source_locations        
         
         self.interval = interval
-        self.maxCount = maxCount
-        self.maxAge = maxAge
+        self.max_count = max_count
+        self.max_age = max_age
         
         self.backup_required = event.Event()
         self.backup_expired = event.Event()
             
-        maxCountAge = maxCount * interval
-        self.maxAge = maxCountAge if maxCountAge > maxAge else maxAge
+        max_cout_age = max_count * interval
+        self.max_age = max_cout_age if max_cout_age > max_age else max_age
         
         self.backups = []
         for directory in self.source_locations:
@@ -110,18 +108,18 @@ class BackupRepository(object):
         
     
     def check_backups(self):
-        maxBirth = datetime.datetime.now() - self.maxAge
-        minBirth = datetime.datetime.now() - self.interval
+        max_birth = datetime.datetime.now() - self.max_age
+        min_birth = datetime.datetime.now() - self.interval
         
-        backupNeeded = True
+        backup_needed = True
         
         for backup in self.backups:
-            if backup.birth < maxBirth:
+            if backup.birth < max_birth:
                 self._on_backup_expired(backup.location)
-            if backup.birth >= minBirth:
-                backupNeeded = False
+            if backup.birth >= min_birth:
+                backup_needed = False
                 
-        if backupNeeded:
+        if backup_needed:
             self._on_backup_required(self.repository_location, 
                                      self.source_locations,
                                      self._get_latest_backup)
@@ -130,14 +128,14 @@ class BackupRepository(object):
             
     def _on_backup_required(self, repository_location, source_locations,
                             latest_backup):
-        if len(self.backupRequired):
-            self.backupRequired(host, repository_location, source_locations,
-                                latest_backup)
+        if len(self.backup_required):
+            self.backup_required(repository_location, source_locations,
+                                 latest_backup)
           
           
     def _on_backup_expired(self, location):
-        if len(self.backupExpired):
-            self.backupExpired(location)
+        if len(self.backup_expired):
+            self.backup_expired(location)
             
     def _get_latest_backup(self):
         if len(self.backups) == 0:
@@ -153,11 +151,12 @@ class BackupRepository(object):
 class Backup(object):
     
     def __init__(self, location):
-        self.directoryName = location
-        (self.birth,) = self._parse_name(location.path)
+        self.location = location
+        (self.birth,) = _parse_name(location.path)
 
-    def _parse_name(self, name):
-        if not name.endswith(".{}".format(SUFFIX)):
-            raise ValueError("Invalid extension.")
-        return (datetime.datetime.strptime(name.split('.')[0], TIMEFORMAT),)
+
+def _parse_name(self, name):
+    if not name.endswith(".{}".format(SUFFIX)):
+        raise ValueError("Invalid extension.")
+    return (datetime.datetime.strptime(name.split('.')[0], TIMEFORMAT),)
         

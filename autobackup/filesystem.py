@@ -23,6 +23,7 @@ class Device(object):
         self.uuid = uuid
         self.filesystem = filesystem
         self.host = host
+        self.user = user
         
         
     def is_available(self):
@@ -37,7 +38,7 @@ class Device(object):
         """
         return process.func_file_exists(self.host, self.user, 
                                         self.get_device_file_path,
-                                        process.fileTypes.BLOCK_SPECIAL)  
+                                        process.FileTypes.BLOCK_SPECIAL)  
         
         
     def get_device_file_path(self):
@@ -82,10 +83,10 @@ class Mountpoint(object):
     def create(self, create_parents):
         """
         Creates the mountpoint if it does not exist already.
-        :param createParents: Specifies whether parent directories of the 
+        :param create_parents: Specifies whether parent directories of the 
         mountpoint should be created if they do not exist. If False and the 
         parent directories do not exist, an exception will be raised.
-        :type createParents: bool
+        :type create_parents: bool
         :raises: Exception if creating the mountpoint failed.
         """
         if not self.exists():
@@ -282,7 +283,7 @@ class Mountpoint(object):
         :rtype: bool
         """
         return process.func_file_exists(self.host, self.user, self.path, 
-                                        process.fileTypes.DIRECTORY)    
+                                        process.FileTypes.DIRECTORY)    
     
     
     def is_empty(self):
@@ -303,8 +304,8 @@ class Mountpoint(object):
         :rtype: bool
         """
         args = ["mount"]
-        (_, stdouterror, _) = process.execute(self.host, args, self.user)
-        for line in str(stdouterror).split('\n'):
+        (_, stdouterr, _) = process.execute(self.host, args, self.user)
+        for line in str(stdouterr).split('\n'):
             # The output of mount has the following layout:
             # <device> on <mountpoint> type <fstype> (<options>)
             # We want to extract the mountpoint.
@@ -339,10 +340,10 @@ class FullLocation(object):
         
             
     def _get_path(self):
-        if device is None:
-            return path
+        if self.device is None:
+            return self.path
         else:
-            return os.path.join(mountpoint.path, path)
+            return os.path.join(self.mountpoint.path, self.path)
     path = property(_get_path)
 
         

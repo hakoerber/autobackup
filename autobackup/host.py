@@ -10,7 +10,7 @@ class Host(object):
         if ip == None and hostname == None:
             raise ValueError("Either ip or hostname must be specified.")
         try:
-            self.__ip = ip if ip != None else socket.gethostbyname(hostname)
+            self._ip = ip if ip != None else socket.gethostbyname(hostname)
         except socket.gaierror:
             raise ValueError("Unknown hostname.")
         
@@ -19,9 +19,9 @@ class Host(object):
         return self.ip.startswith("127.")
 
 
-    def __getIP(self):
-        return self.__ip
-    ip = property(__getIP)
+    def _get_ip(self):
+        return self._ip
+    ip = property(_get_ip)
     
     
     def get_real_ip(self):

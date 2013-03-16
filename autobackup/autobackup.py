@@ -1,7 +1,5 @@
 #!/usr/bin/env python
-import os
 import sys
-import getpass
 
 import configparser
 import host
@@ -9,7 +7,6 @@ import filesystem
 import cron
 import backuprepository
 import process
-
 
 
 def main():
@@ -26,14 +23,14 @@ def main():
                                  )
     try:
         parser.read()
-    except IOError as e:
-        _exit_with(1, "{}: {}".format(config_path, e.message))
+    except IOError as error:
+        _exit_with(1, "{}: {}".format(config_path, error.message))
 
     try:
         config_structure = parser.parse()
-    except configparser.ParseError as e:
+    except configparser.ParseError as error:
         _exit_with(1, "The configuration file is invalid:\n{}: {} - {}".
-                   format(e.line_number, e.line, e.message))
+                   format(error.line_number, error.line, error.message))
 
     # TODO Some validation needed.
 
@@ -66,7 +63,6 @@ def main():
         repo_location = _parse_full_location(hosts, devices, value["to"])
         source_locations = [_get_path_info(hosts, devices, source_string) for
             source_string in value["from"]]
-        cronstrings = value["create_at"]
         cronjobs = [cron.Cronjob(cronstr) for 
             cronstr in value["create_at"].split(';')]
 
@@ -102,7 +98,7 @@ def main():
                     maxAge=backup[3],
                     maxCount=backup[4]))
                     
-    manager = backupRepository.BackupManager(backup_repositories)
+    manager = backuprepository.BackupManager(backup_repositories)
     manager.backup_required += _backup_required_handler
     manager.backup_expired  += _backup_expired_handler
 
@@ -143,14 +139,14 @@ def _get_path_info(hosts, devices, path):
         temp.extend([rest.split("@")[0], rest.split("@")[1]])
     try:
         temp[0] = devices['<' + temp[0] + '>'] if temp[0] else None
-    except KeyError as e:
-        print "Unknown device {}.".format(path_device)
+    except KeyError as error:
+        print "Unknown device {}.".format(temp[0])
         sys.exit(1)
     if temp[2]:
         try:
             temp[2] = hosts['<' + temp[2] + '>']
-        except KeyError as e:
-            print "Unknown host {}.".format(path_host)
+        except KeyError as error:
+            print "Unknown host {}.".format(temp[2])
             sys.exit(1)
     else:
         temp[2] = host.get_localhost()
