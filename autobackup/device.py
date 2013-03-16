@@ -1,3 +1,6 @@
+"""
+Module to handle devices and mountpoints, even on remote machines.
+"""
 import os
 import process
 import getpass
@@ -54,7 +57,7 @@ class Mountpoint(object):
     Represents a mountpoint on a specific host and provices methods to mount 
     and unmount devices on this mountpoint, among others.
     """
-    def __init__(self, host, path, options, create, user=None):
+    def __init__(self, host, path, options, create_if_not_existent, user=None):
         """
         :param host: The host of the mountpoint.
         :type host: Host instance
@@ -75,13 +78,13 @@ class Mountpoint(object):
         self.host = host
         self.path = path
         self.options = options
-        self.create = create
+        self.create_if_not_existent = create_if_not_existent
         self.user = user
         if user == None or host.is_localhost():
             self.user = getpass.getuser()
         
         
-    def create(self, createParents):
+    def create(self, create_parents):
         """
         Creates the mountpoint if it does not exist already.
         :param createParents: Specifies whether parent directories of the 
@@ -91,13 +94,13 @@ class Mountpoint(object):
         :raises: Exception if creating the mountpoint failed.
         """
         if not self.exists():
-            (exitCode, _, stderrdata) = process.func_create_directory(
+            (exit_code, _, stderrdata) = process.func_create_directory(
                 self.host,
                 self.user,
                 self.path, 
-                createParents)
+                create_parents)
             
-            if exitCode != 0:
+            if exit_code != 0:
                 raise Exception("Creating the mountpoint failed: " + stderrdata)
     
     
@@ -110,10 +113,10 @@ class Mountpoint(object):
         if self.is_active() or not self.is_empty():
             raise MountpointBusyError(self)
         
-        (exitCode, _, stderrdata) = process.func_create_directory(self.host,
+        (exit_code, _, stderrdata) = process.func_remove_directory(self.host,
                                                                   self.user,
                                                                   self.path)
-        if exitCode != 0:
+        if exit_code != 0:
             raise Exception("Removing the mountpoint failed: " + stderrdata)
     
     
@@ -166,37 +169,37 @@ class Mountpoint(object):
                     self.path]
         elif self.host.isLocal() and not device.host.isLocal():
             # case 2
-            remoteTempMountpoint = Mountpoint(device.host, 
-                                              TEMP_MOUNTPOINT_REMOTE,
-                                              self.options, 
-                                              False, 
-                                              self.user)
-            remoteTempMountpoint.create()
-            remoteTempMountpoint.mount(device)
+            remote_tmp_mountpoint = Mountpoint(device.host, 
+                                               TEMP_MOUNTPOINT_REMOTE,
+                                               self.options, 
+                                               False, 
+                                               self.user)
+            remote_tmp_mountpoint.create(create_parents=True)
+            remote_tmp_mountpoint.mount(device)
             args = ["sshfs",
                     "{0}@{1}:{2}".format(self.user, 
-                                         remoteTempMountpoint.host.ip,
-                                         remoteTempMountpoint.path),
+                                         remote_tmp_mountpoint.host.ip,
+                                         remote_tmp_mountpoint.path),
                     self.path,
                     "-o", "idmap=user"]
         elif not self.host.isLocal() and device.host.isLocal(): 
             # case 3
-            localTempMountpoint = Mountpoint(device.host, 
-                                             TEMP_MOUNTPOINT_REMOTE,
-                                             self.options, 
-                                             False, 
-                                             self.user)
-            localTempMountpoint.create()
-            localTempMountpoint.mount(device)
+            local_tmp_mountpoint = Mountpoint(device.host, 
+                                              TEMP_MOUNTPOINT_REMOTE,
+                                              self.options, 
+                                              False, 
+                                              self.user)
+            local_tmp_mountpoint.create(create_parents=True)
+            local_tmp_mountpoint.mount(device)
             args = ["sshfs",
                     self.path,
                     "{0}@{1}:{2}".format(self.user, 
                                          device.host.get_real_ip(), 
-                                         localTempMountpoint.path),
+                                         local_tmp_mountpoint.path),
                     "-o", "idmap=user"]
              
-        (exitCode, _, stderrdata) = process.execute(self.host, args, self.user)
-        if exitCode != 0:
+        (exit_code, _, stderrdata) = process.execute(self.host, args, self.user)
+        if exit_code != 0:
             raise Exception("Mounting failed: " + stderrdata)
 
     
@@ -232,12 +235,12 @@ class Mountpoint(object):
         args = ["mount", "--rbind" if submounts else "--bind", 
                 self.path, target_mountpoint.path]
         
-        (exitCode, _, stderrdata) = process.execute(self.host, args, self.user)
-        if exitCode != 0:
+        (exit_code, _, stderrdata) = process.execute(self.host, args, self.user)
+        if exit_code != 0:
             raise Exception("Binding failed: " + stderrdata)
     
     
-    def remount(self, newOptions=None):
+    def remount(self, new_options=None):
         """
         Remounts the device on this mountpoint with different options if any are
         given. If the mountpoint is not active, an exception is raised.
@@ -249,12 +252,12 @@ class Mountpoint(object):
         if not self.is_active():
             raise MountpointNotReadyError(self)
 
-        if newOptions == None:
-            newOptions = self.options
-        args = ["mount", "-o", (",".join(newOptions)+ ",remount").lstrip(','),
+        if new_options == None:
+            new_options = self.options
+        args = ["mount", "-o", (",".join(new_options)+ ",remount").lstrip(','),
                 self.path]
-        (exitCode, _, stderrdata) = process.execute(self.host, args, self.user)
-        if exitCode != 0:
+        (exit_code, _, stderrdata) = process.execute(self.host, args, self.user)
+        if exit_code != 0:
             raise Exception("Remounting failed: " + stderrdata)
 
     
@@ -266,14 +269,14 @@ class Mountpoint(object):
         :raises: Exception if unmounting failed.
         :raises: MountpointNotReadyError if the mountpoint is active.
         """
-        if not self.active():
+        if not self.is_active():
             raise MountpointNotReadyError(self)
         args = ["umount", self.path]
-        (exitCode, _, stderrdata) = process.execute(self.host, args, self.user)
+        (exit_code, _, stderrdata) = process.execute(self.host, args, self.user)
         # An exitcode of 1 means that the device is busy.
-        if exitCode == 1:
+        if exit_code == 1:
             raise MountpointBusyError(self)
-        elif exitCode > 1:
+        elif exit_code > 1:
             raise Exception("Unmounting failed: " + stderrdata)
         
 
@@ -306,7 +309,7 @@ class Mountpoint(object):
         """
         args = ["mount"]
         (_, stdouterror, _) = process.execute(self.host, args, self.user)
-        for line in stdouterror.split('\n'):
+        for line in str(stdouterror).split('\n'):
             # The output of mount has the following layout:
             # <device> on <mountpoint> type <fstype> (<options>)
             # We want to extract the mountpoint.
@@ -322,6 +325,7 @@ class MountpointBusyError(Exception):
     or try to bind to an active or non-empty mountpoint.
     """
     def __init__(self, mountpoint):
+        super(MountpointBusyError, self).__init__()
         self.mountpoint = mountpoint
         
         
@@ -331,5 +335,6 @@ class MountpointNotReadyError(Exception):
     non-active mountpoint
     """
     def __init__(self, mountpoint):
+        super(MountpointNotReadyError, self).__init__()
         self.mountpoint = mountpoint
     
