@@ -1,5 +1,6 @@
 import event
 import datetime
+import filesystem
 
 import apscheduler.scheduler as scheduler # @UnresolvedImport
 
@@ -64,8 +65,10 @@ class BackupRepository(object):
     which backups are to be created. Will raise events accordingly.
     """
     
-    def __init__(self, host, path, directories, sourceHost, sources, interval,
-                 maxCount, maxAge):
+    def __init__(self, 
+                 repository_location, repository_directories,
+                 source_locations,
+                 interval, maxCount, maxAge):
         """
         :param sourceHost:
         The host of the source directories.
@@ -86,57 +89,53 @@ class BackupRepository(object):
         :param maxAge:
         The maximum age of all backups. Older backups are to be deleted.
         """
+        self.repository_location = repository_location
+        self.repository_directories = repository_directories
         
-        self.__sourceHost = sourceHost
-        self.__sources = sources
+        self.source_locations = source_locations        
         
-        self.host = host
-        self.path = path
-        self.__directories = directories
-        
-        self.__interval = interval
-        self.__maxCount = maxCount
-        self.__maxAge = maxAge
+        self.interval = interval
+        self.maxCount = maxCount
+        self.maxAge = maxAge
         
         self.backup_required = event.Event()
         self.backup_expired = event.Event()
             
         maxCountAge = maxCount * interval
-        self.__maxAge = maxCountAge if maxCountAge > maxAge else maxAge
+        self.maxAge = maxCountAge if maxCountAge > maxAge else maxAge
+        
+        self.backups = []
+        for directory in self.source_locations:
+            self.backups.append(Backup(directory))
         
     
     def check_backups(self):
-        maxBirth = datetime.datetime.now() - self.__maxAge
-        minBirth = datetime.datetime.now() - self.__interval
+        maxBirth = datetime.datetime.now() - self.maxAge
+        minBirth = datetime.datetime.now() - self.interval
         
         backupNeeded = True
         
-        for backup in self.__backups:
+        for backup in self.backups:
             if backup.birth < maxBirth:
-                self._on_backup_expired(self.host, backup.directoryName)
+                self._on_backup_expired(backup.location)
             if backup.birth >= minBirth:
                 backupNeeded = False
                 
         if backupNeeded:
-            self._on_backup_required(self.host, 
-                                     self._generate_new_backup_name(),
-                                     self.__sourceHost,
-                                     self.__sources)
+            self._on_backup_required(self.repository_location, 
+                                     self.source_locations,
+                                     self._get_latest_backup)
             
     
-    def _initialize_backups(self):
-        for directory in self.__directories:
-            self.__backups.append(Backup(directory))
             
-            
-    def _on_backup_required(self, host, newBackupDirectoryName, sourceHost,
-                            sources):
+    def _on_backup_required(self, repository_location, source_locations,
+                            latest_backup):
         if len(self.backupRequired):
-            self.backupRequired(host, newBackupDirectoryName, sourceHost,
-                                sources)
+            self.backupRequired(host, repository_location, source_locations,
+                                latest_backup)
           
           
-    def _on_backup_expired(self, host, expiredBackupDirectoryName):
+    def _on_backup_expired(self, location):
         if len(self.backupExpired):
             self.backupExpired(host, expiredBackupDirectoryName)
             
@@ -144,9 +143,9 @@ class BackupRepository(object):
     
 class Backup(object):
     
-    def __init__(self, directoryName):
-        self.directoryName = directoryName
-        (self.birth,) = self._parse_name(directoryName)
+    def __init__(self, location):
+        self.directoryName = location
+        (self.birth,) = self._parse_name(location.path)
 
     def _parse_name(self, name):
         if not name.endswith(".{}".format(SUFFIX)):
