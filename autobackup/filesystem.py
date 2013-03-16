@@ -2,7 +2,6 @@
 Module to handle devices and mountpoints, even on remote machines.
 """
 import os
-import getpass
 
 import process
 
@@ -11,7 +10,7 @@ class Device(object):
     Represents a hardware storage device on a specific host, defined by its 
     UUID.
     """
-    def __init__(self, host, uuid, filesystem):
+    def __init__(self, host, uuid, filesystem, user):
         """
         :param host: The host of the device.
         :type host: Host instance
@@ -26,7 +25,7 @@ class Device(object):
         self.host = host
         
         
-    def is_available(self, user=None):
+    def is_available(self):
         """
         Determines whether the device is available.
         :param user: The user who is to own the process to check the 
@@ -36,10 +35,7 @@ class Device(object):
         :returns: True if the device is available, otherwise false.
         :rtype: bool
         """
-        if user == None or self.host.is_localhost():
-            user = getpass.getuser()
-            
-        return process.func_file_exists(self.host, user, 
+        return process.func_file_exists(self.host, self.user, 
                                         self.get_device_file_path,
                                         process.fileTypes.BLOCK_SPECIAL)  
         
@@ -58,7 +54,7 @@ class Mountpoint(object):
     Represents a mountpoint on a specific host and provices methods to mount 
     and unmount devices on this mountpoint, among others.
     """
-    def __init__(self, host, path, options, create_if_not_existent, user=None):
+    def __init__(self, host, path, options, create_if_not_existent, user):
         """
         :param host: The host of the mountpoint.
         :type host: Host instance
@@ -81,8 +77,6 @@ class Mountpoint(object):
         self.options = options
         self.create_if_not_existent = create_if_not_existent
         self.user = user
-        if user == None or host.is_localhost():
-            self.user = getpass.getuser()
         
         
     def create(self, create_parents):
@@ -317,7 +311,42 @@ class Mountpoint(object):
             if line.split(' ')[2] == self.path:
                 return True
         return False
-    
+            
+
+class FullLocation(object):
+    def __init__(self, user, host, path, device, mountpoint):
+        self.user = user
+        self.host = host
+        self.path = path
+        self.device = device
+        self.mountpoint = mountpoint
+        
+        
+    def mount(self):
+        if self.device is not None:
+            self.mountpoint.mount()
+        
+            
+    def unmount(self):
+        if self.device is not None:
+            self.mountpoint.unmount()
+            
+    def get_ssh_string(self):
+        if self.host.is_localhost():
+            return self.path
+        else:
+            return "{0}@{1}:{2}".format(self.user, self.host, self.path)
+        
+            
+    def _get_path(self):
+        if device is None:
+            return path
+        else:
+            return os.path.join(mountpoint.path, path)
+    path = property(_get_path)
+
+        
+        
     
 class MountpointBusyError(Exception):
     """
