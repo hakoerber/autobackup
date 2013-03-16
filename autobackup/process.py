@@ -1,9 +1,9 @@
 import getpass
 import subprocess
 
-import networkConnection
+import networkconnection
 
-CONNECTION = networkConnection.SSHNetworkConnection
+CONNECTION = networkconnection.SSHNetworkConnection
 CONNECTION_PORT = 22
 CONNECTION_TIMEOUT = 10 * 1000
 CONNECTION_REMOTE_SHELL = "/bin/bash"

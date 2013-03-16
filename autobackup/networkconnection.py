@@ -1,8 +1,8 @@
 import time
 import subprocess
 
-import idGenerator
-import fdManager
+import idgenerator
+import fdmanager
 
 class NetworkConnection(object):
     """Abstract base class representing a network connection."""
@@ -71,7 +71,7 @@ class SSHNetworkConnection(NetworkConnection):
         if self.__sshProcess != None:
             return 
          
-        connectionID = idGenerator.generate_id(20)
+        connectionID = idgenerator.generate_id(20)
         
         args = ["ssh",\
                 "-o", "StrictHostKeyChecking=yes",\
@@ -101,7 +101,7 @@ class SSHNetworkConnection(NetworkConnection):
         
         # Unblock pipes so read() and readline() does not block
         for i in 0,1:
-            fdManager.unblock_file_descriptor(stdpipe[i])
+            fdmanager.unblock_file_descriptor(stdpipe[i])
         
         connected = False
 
@@ -115,7 +115,7 @@ class SSHNetworkConnection(NetworkConnection):
                 raise Exception("timeout")
                         
             for i in 0,1:
-                lines[i] = fdManager.read_all(stdpipe[i])
+                lines[i] = fdmanager.read_all(stdpipe[i])
                                 
             for i in 0,1:
                 for line in lines[i].split('\n'):
@@ -133,7 +133,7 @@ class SSHNetworkConnection(NetworkConnection):
             time.sleep(POLL_INTERVAL/1000.0)
             
         for i in 0,1:
-            output[i].append(fdManager.read_all(stdpipe[i]))
+            output[i].append(fdmanager.read_all(stdpipe[i]))
             output[i] = "".join(output[i])
             
         if output[1]:
@@ -150,7 +150,7 @@ class SSHNetworkConnection(NetworkConnection):
     
     
     def execute(self, command, timeout):
-        commandID = idGenerator.generate_id(20)
+        commandID = idgenerator.generate_id(20)
         stdpipe = (self.__sshProcess.stdout, self.__sshProcess.stderr)
         
         # Flush streams as precaution
@@ -179,7 +179,7 @@ class SSHNetworkConnection(NetworkConnection):
                 raise Exception("timeout")
                                     
             for i in 0,1:
-                lines[i] = fdManager.read_all(stdpipe[i])
+                lines[i] = fdmanager.read_all(stdpipe[i])
                             
             for i in 0,1:
                 for line in lines[i].split('\n'):
@@ -194,7 +194,7 @@ class SSHNetworkConnection(NetworkConnection):
             time.sleep(POLL_INTERVAL/1000.0)
             
         for i in 0,1:
-            output[i].append(fdManager.read_all(stdpipe[i]))
+            output[i].append(fdmanager.read_all(stdpipe[i]))
             output[i] = '\n'.join(output[i])
             
         exitCode = lastLine.split('@')[1]

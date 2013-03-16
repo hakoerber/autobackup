@@ -2,8 +2,9 @@
 Module to handle devices and mountpoints, even on remote machines.
 """
 import os
-import process
 import getpass
+
+import process
 
 class Device(object):
     """
