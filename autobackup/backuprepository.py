@@ -137,7 +137,16 @@ class BackupRepository(object):
           
     def _on_backup_expired(self, location):
         if len(self.backupExpired):
-            self.backupExpired(host, expiredBackupDirectoryName)
+            self.backupExpired(location)
+            
+    def _get_latest_backup(self):
+        if len(self.backups) == 0:
+            return None
+        latest = self.backups[0]
+        for backup in self.backups:
+            if backup.birth > latest.birth:
+                latest = backup
+        return latest
             
     
     
