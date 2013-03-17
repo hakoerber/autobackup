@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import sys
+import getpass
 
 import configparser
 import host
@@ -171,11 +172,28 @@ def _get_bool(boolstr):
     raise ValueError("{} is not a boolean value.".format(boolstr))
 
 
-def _parse_full_location(string, hosts, devices):#
+def _parse_full_location(string, hosts, devices):
+    rest = string
     # when no user, use current one!
-    # TODO implement
-    return None
+    # the location string has the following format:
+    # [[<user>]@<host>:]<path|subdir>[$<device>]
+    
+    # get the device:
+    parts = rest.split('$')
+    (rest, device) = (parts[0], devices[parts[1]] if len(parts) == 2 else None)
 
+    # get the "user@host" part and parse it
+    parts = rest.split(':')
+    (rest, user_host) = (parts[1] if len(parts) == 2 else parts[0],
+                         parts[0] if len(parts) == 2 else parts[1])
+    parts = user_host.split('@')
+    (user, host) = (parts[0] if len(parts) == 2 else getpass.getuser(),
+                    parts[1] if len(parts) == 2 else parts[1])
+                    
+    # so the rest must be the path
+    path = rest
+                         
+    return filesystem.FullLocation(user, host, path, device[0], device[1])
 
 if __name__ == '__main__':
     main()
