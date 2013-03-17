@@ -95,8 +95,8 @@ def main():
                     directories=directories,
                     source_locations=backup[1],
                     interval=cronjobs,
-                    maxAge=backup[3],
-                    maxCount=backup[4]))
+                    max_age=backup[3],
+                    max_count=backup[4]))
                     
     manager = backuprepository.BackupManager(backup_repositories)
     manager.backup_required += _backup_required_handler
@@ -121,7 +121,11 @@ def _backup_required_handler(repository_location, source_locations,
 
 
 def _backup_expired_handler(backup_location):
-    pass
+    process.func_remote_directory(
+        user=backup_location.user, 
+        path=backup_location.path,
+        user=backup_location.user,
+        recursive=False)#True # I am afraid.
 
 
 
