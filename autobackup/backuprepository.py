@@ -1,6 +1,7 @@
 import datetime
+import os
 
-import apscheduler.scheduler as scheduler # @UnresolvedImport
+import apscheduler.scheduler as scheduler #@UnresolvedImport
 
 import event
 
@@ -18,17 +19,16 @@ class BackupManager(object):
     
     def __init__(self, backup_repositories):
         """
-        :param backupRepositories: A list of backupRepositories to 
-        manage.
-        :type backupRepositories: list of BackupRepository instances
+        :param backup_repositories: A list of BackupRepositories to manage.
+        :type backup_repositories: list of BackupRepository instances
         """
-        self.backupRepositories = backup_repositories
+        self.backup_repositories = backup_repositories
         
-        # We will just handle all events raised by the backupRepositories and
+        # We will just handle all events raised by the backup_repositories and
         # re-raise them with the same information.
         self.backup_required = event.Event()
         self.backup_expired = event.Event()
-        for repository in backupRepositories:
+        for repository in backup_repositories:
             repository.backup_required += self._backup_required_handler
             repository.backup_expired  += self._backup_expired_handler
 
@@ -155,8 +155,9 @@ class Backup(object):
         (self.birth,) = _parse_name(location.path)
 
 
-def _parse_name(self, name):
-    if not name.endswith(".{}".format(SUFFIX)):
+def _parse_name(self, path):
+    if not path.endswith(".{}".format(SUFFIX)):
         raise ValueError("Invalid extension.")
-    return (datetime.datetime.strptime(name.split('.')[0], TIMEFORMAT),)
+    name = os.path.basename(path)
+    return (datetime.datetime.strptime(split('.')[0], TIMEFORMAT),)
         

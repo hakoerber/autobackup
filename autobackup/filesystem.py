@@ -17,8 +17,11 @@ class Device(object):
         :param uuid: The UUID of the device.
         :type uuid: string
         :param filesystem: The filesystem of the device. If you are not sure, 
-        try "auto" and mount will try to guess the filesystem.
+        try "auto" and mount() will try to guess the filesystem.
         :type filesystem: string
+        :param user: The user as who owns allrelevant processes spawned by this
+        class.
+        :type user: string
         """
         self.uuid = uuid
         self.filesystem = filesystem
@@ -29,10 +32,6 @@ class Device(object):
     def is_available(self):
         """
         Determines whether the device is available.
-        :param user: The user who is to own the process to check the 
-        availability. If the host is the localhost or None is given, the current
-        user will be  used regardless of the value of this parameter.
-        :type user: string
         :returns: True if the device is available, otherwise false.
         :rtype: bool
         """
@@ -59,18 +58,17 @@ class Mountpoint(object):
         """
         :param host: The host of the mountpoint.
         :type host: Host instance
-        :param path: The absolute on the specified host.
+        :param path: The absolute path on the specified host.
         :type path: string
         :param options: A tuple containing all mount options.
         :type options: tuple
-        :param create: A boolean that specifies whether the mountpoint is to be
-        created automatically if it does not exist. You can always create the 
-        mountpoint manually with create().
-        :type create: bool
+        :param create_if_not_existent: A boolean that specifies whether the 
+        mountpoint is to be created automatically if it does not exist. You can 
+        always create the mountpoint manually with create().
+        :type create_if_not_existent: bool
         :param user: The user who is own all processes spawned by this class. If
-        the host is the localhost or None is given, the current user will be 
-        used regardless of the value of the parameter, even for remote 
-        mountpoints.
+        the host is the localhost, the current user will be used regardless of 
+        the value of the parameter.
         :type user: string
         """
         self.host = host
@@ -109,9 +107,8 @@ class Mountpoint(object):
         if self.is_active() or not self.is_empty():
             raise MountpointBusyError(self)
         
-        (exit_code, _, stderrdata) = process.func_remove_directory(self.host,
-                                                                  self.user,
-                                                                  self.path)
+        (exit_code, _, stderrdata) = process.func_remove_directory(
+                self.host, self.user, self.path, recursive=False)
         if exit_code != 0:
             raise Exception("Removing the mountpoint failed: " + stderrdata)
     
@@ -205,8 +202,8 @@ class Mountpoint(object):
         If the target mountpoint is active, non-empty or does not exist, or if 
         this mountpoint is not active, an exception will be raised.
         ATTENTION: Binding between different hosts is not supported.
-        :param mountpoint: The binding mountpoint.
-        :type mountpoint: Mountpoint instance
+        :param target_mountpoint: The binding mountpoint.
+        :type target_mountpoint: Mountpoint instance
         :param submounts: If True, all submounts of this mountpoint will also be
         attached to the binding mountpoint. If False, they will not be 
         available.

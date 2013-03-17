@@ -196,7 +196,7 @@ def func_create_directory(host, user, path, create_parents):
     return execute(host, args, user)
 
 
-def func_remove_directory(host, user, path):
+def func_remove_directory(host, user, path, recursive):
     """
     Function to remove a directory.
     :param host: Host on which to execute the command.
@@ -205,10 +205,16 @@ def func_remove_directory(host, user, path):
     :type user: string
     :param path: The path of the directory that shall be deleted.
     :type path: string
+    :param recursive: Determines whether to delete the directory and all its
+    content recursively.
+    :type recursive: bool
     :returns: A tuple with the exit code, the stdout data and stderr data.
     :rtype: tuple
     """
-    args = ["rmdir", path]
+    if recursive:
+        args = ["rm", "--recursive"]
+    else:
+        args = ["rmdir", path]
     return execute(host, args, user)
     
 def func_create_backup(source_locations, target_location, hardlink_to):

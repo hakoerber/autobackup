@@ -86,9 +86,9 @@ class SSHNetworkConnection(NetworkConnection):
                 'echo {0} ; {1}'.format(connection_id, remote_shell)]
                                        
         self.ssh_process = subprocess.Popen(args, shell=False, bufsize=-1, \
-                                             stdout=subprocess.PIPE, \
-                                             stderr=subprocess.PIPE, \
-                                             stdin=subprocess.PIPE)        
+                                            stdout=subprocess.PIPE, \
+                                            stderr=subprocess.PIPE, \
+                                            stdin=subprocess.PIPE)        
         
         # We will poll the process output once every 100 ms 
         POLL_INTERVAL = 100
