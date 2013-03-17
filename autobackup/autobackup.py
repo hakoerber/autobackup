@@ -8,20 +8,23 @@ import filesystem
 import cron
 import backuprepository
 import process
+import path
 
 
 def main():
+    if len(sys.argv) != 2:
+        print "Usage: {} <path to config file>".format(sys.argv[0])
+        sys.exit(1)
+
     script_name = sys.argv[0]
     config_path = sys.argv[1]
-    if not config_path:
-        print "Usage: {} <path to config file>".format(script_name)
     parser = configparser.Parser(config_path,
                                  comment_chars = ('#',),
                                  section_pairs = (('[', ']'),),
                                  element_pairs = (('<', '>'),),
                                  key_value_separators = ('=',),
-                                 multiple_keys = True
-                                 )
+                                 multiple_keys = True)
+                                 
     try:
         parser.read()
     except IOError as error:
@@ -40,32 +43,35 @@ def main():
         hosts[key] = host.Host(ip=value["ip"])
 
 
-    # mapping: name -> (device instance, mountpoint instance)
+    # mapping: name -> device instance
     # TODO determine user
     devices = {}
     for key, value in config_structure["[devices]"].iteritems():
         device_host = hosts['<' + value["host"] + '>']
-        devices[key] = [filesystem.Device(host=device_host,
-                                          uuid=value["uuid"],
-                                          filesystem=value["filesystem"],
-                                          user=None),
-                        filesystem.Mountpoint(host=device_host,
-                                              path=value["mountpoint"],
-                                              options=value["mount_options"].
-                                                  split(','),
-                                              create_if_not_existent=_get_bool(
-                                                  value["create_mountpoint"]),
-                                              user=None)]
-
+        device_user = value["user"]
+        device_mountpoint = filesystem.Mountpoint(
+            host=device_host,
+            path=value["mountpoint"],
+            options=value["mount_options"].split(','),
+            create_if_not_existent=_get_bool(value["create_mountpoint"]),
+            user=device_user)
+        device = filesystem.Device(host=device_host,
+            uuid=value["uuid"],
+            filesystem=value["filesystem"],
+            user=device_user,
+            mountpoint=device_mountpoint)
+            
+        devices[key] = device
+        
     # mapping: name -> (repo_location, source_locations[], cronjobs[], max_age,
     # max_count)
     backups = {}
     for key, value in config_structure["[backups]"].iteritems():
-        repo_location = _parse_full_location(hosts, devices, value["to"])
-        source_locations = [_get_path_info(hosts, devices, source_string) for
-            source_string in value["from"]]
+        repo_location = _parse_full_location(value["to"], hosts, devices)
+        source_locations = [_parse_full_location(source_string, hosts, devices)
+            for source_string in value["from"]]
         cronjobs = [cron.Cronjob(cronstr) for 
-            cronstr in value["create_at"].split(';')]
+            cronstr in value["create_at"]]
 
         backups[key] = (repo_location,
                         source_locations,
@@ -80,7 +86,7 @@ def main():
     for backup in backups.itervalues():
         repo_location = backup[0]
         if repo_location.device is not None:
-            repo_location.mount()
+            repo_location.device.mount()
                         
     # read backup repositories and handle their events
     backup_repositories = []
@@ -123,7 +129,7 @@ def _backup_required_handler(repository_location, source_locations,
 
 def _backup_expired_handler(backup_location):
     process.func_remote_directory(
-        user=backup_location.user, 
+        host=backup_location.host, 
         path=backup_location.path,
         user=backup_location.user,
         recursive=False)#True # I am afraid.
@@ -180,24 +186,23 @@ def _parse_full_location(string, hosts, devices):
     
     # get the device:
     parts = rest.split('$')
-    (rest, device) = (parts[0], devices[parts[1]] if len(parts) == 2 else None)
+    (rest, device) = (parts[0], devices["<" + parts[1] + '>'] 
+                                if len(parts) == 2 else None)
 
     # get the "user@host" part and parse it
     parts = rest.split(':')
     (rest, user_host) = (parts[1] if len(parts) == 2 else parts[0],
-                         parts[0] if len(parts) == 2 else parts[1])
+                         parts[0] if len(parts) == 2 else "")
     parts = user_host.split('@')
-    (user, host) = (parts[0] if len(parts) == 2 else getpass.getuser(),
-                    parts[1] if len(parts) == 2 else parts[1])
+    (l_user, l_host) = (parts[0] if len(parts) == 2 else getpass.getuser(),
+                        hosts['<' + parts[1] + '>'] if len(parts) == 2 
+                            else host.get_localhost())
                     
     # so the rest must be the path
-    path = rest
-                         
-    return filesystem.FullLocation(user, host, path, device[0], device[1])
+    full_path = rest
+                             
+    return path.FullLocation(l_user, l_host, full_path, device)
 
+    
 if __name__ == '__main__':
     main()
-
-
-
-
