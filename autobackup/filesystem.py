@@ -5,12 +5,13 @@ import os
 
 import process
 
+
 class Device(object):
     """
     Represents a hardware storage device on a specific host, defined by its 
     UUID.
     """
-    def __init__(self, host, uuid, filesystem, user):
+    def __init__(self, host, uuid, filesystem, user, mountpoint=None):
         """
         :param host: The host of the device.
         :type host: Host instance
@@ -27,6 +28,7 @@ class Device(object):
         self.filesystem = filesystem
         self.host = host
         self.user = user
+        self.mountpoint = mountpoint
         
         
     def is_available(self):
@@ -47,6 +49,16 @@ class Device(object):
         :rypte: string
         """
         return os.path.join("/dev/disk/by-uuid", self.uuid)
+    
+    
+    def mount(self, mountpoint=None):
+        if mountpoint is None and self.mountpoint is None:
+            raise Exception("Please specify a device either globally for the "
+                "whole mountpoint or as parameter for mount().")
+        if mountpoint is None:
+            mountpoint = self.mountpoint
+        mountpoint.mount(self)
+
     
     
 class Mountpoint(object):
@@ -76,7 +88,7 @@ class Mountpoint(object):
         self.options = options
         self.create_if_not_existent = create_if_not_existent
         self.user = user
-        
+    
         
     def create(self, create_parents):
         """
@@ -122,7 +134,7 @@ class Mountpoint(object):
         :raises: MountpointNotReadyError if the mountpoint is not empty.
         :raises: MountpointBusyError if the mountpoint is active.
         :raises: Exception if the mounting failed.
-        """
+        """       
         if not self.is_empty():
             raise MountpointNotReadyError(self)
         if self.is_active():
@@ -293,13 +305,13 @@ class Mountpoint(object):
         return process.func_directory_empty(self.host, self.user, self.path)
     
     
-    # Some caching could be implemented.
     def is_active(self):
         """
         Determines whether the mountpoint is active.
         :returns: True if the mountpoint is active, False otherwise.
         :rtype: bool
         """
+        # Some caching could be implemented.
         args = ["mount"]
         (_, stdouterr, _) = process.execute(self.host, args, self.user)
         for line in str(stdouterr).split('\n'):
@@ -321,6 +333,7 @@ class MountpointBusyError(Exception):
     def __init__(self, mountpoint):
         super(MountpointBusyError, self).__init__()
         self.mountpoint = mountpoint
+    
         
         
 class MountpointNotReadyError(Exception):
@@ -331,4 +344,3 @@ class MountpointNotReadyError(Exception):
     def __init__(self, mountpoint):
         super(MountpointNotReadyError, self).__init__()
         self.mountpoint = mountpoint
-    
