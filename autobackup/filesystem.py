@@ -309,42 +309,8 @@ class Mountpoint(object):
             if line.split(' ')[2] == self.path:
                 return True
         return False
-            
-
-class FullLocation(object):
-    def __init__(self, user, host, path, device, mountpoint):
-        self.user = user
-        self.host = host
-        self._path = path
-        self.device = device
-        self.mountpoint = mountpoint
-        
-        
-    def mount(self):
-        if self.device is not None:
-            self.mountpoint.mount()
-        
-            
-    def unmount(self):
-        if self.device is not None:
-            self.mountpoint.unmount()
-            
-    def get_ssh_string(self):
-        if self.host.is_localhost():
-            return self.path
-        else:
-            return "{0}@{1}:{2}".format(self.user, self.host, self.path)
-        
-            
-    def _get_path(self):
-        if self.device is None:
-            return self._path
-        else:
-            return os.path.join(self.mountpoint.path, self._path)
-    path = property(_get_path)
-
-        
-        
+                 
+    
     
 class MountpointBusyError(Exception):
     """
