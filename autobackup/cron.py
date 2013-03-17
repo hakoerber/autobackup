@@ -3,13 +3,13 @@ import datetime
 ranges = (range(60), range(24), range(1,32), range(1,13), range(1,8), 
           range(1900,3000)) # Creating year 3000 problem
 
-class Crontab(object):
+class Cronjob(object):
     """
     Crontab format:
     minute hour day month year weekday
     """
     def __init__(self, schedule_string):
-        self.schedule = _parse_schedule_string(schedule_string)
+        self.schedule = _get_single_positions(schedule_string)
         for i in range(6):  
             self.schedule[i] = _parse_string_to_range(self.schedule[i], i)
         
@@ -91,7 +91,7 @@ def _tuple_to_datetime(t):
         minute=t[0])
 
 
-def _parse_schedule_string(schedule_string):
+def _get_single_positions(schedule_string):
     return schedule_string.split()[:6]
 
     
