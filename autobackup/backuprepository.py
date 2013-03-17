@@ -155,9 +155,9 @@ class Backup(object):
         (self.birth,) = _parse_name(location.path)
 
 
-def _parse_name(self, path):
+def _parse_name(path):
     if not path.endswith(".{}".format(SUFFIX)):
         raise ValueError("Invalid extension.")
     name = os.path.basename(path)
-    return (datetime.datetime.strptime(split('.')[0], TIMEFORMAT),)
+    return (datetime.datetime.strptime(name.split('.')[0], TIMEFORMAT),)
         
