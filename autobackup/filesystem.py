@@ -315,7 +315,7 @@ class FullLocation(object):
     def __init__(self, user, host, path, device, mountpoint):
         self.user = user
         self.host = host
-        self.path = path
+        self._path = path
         self.device = device
         self.mountpoint = mountpoint
         
@@ -338,9 +338,9 @@ class FullLocation(object):
             
     def _get_path(self):
         if self.device is None:
-            return self.path
+            return self._path
         else:
-            return os.path.join(self.mountpoint.path, self.path)
+            return os.path.join(self.mountpoint.path, self._path)
     path = property(_get_path)
 
         
