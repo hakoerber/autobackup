@@ -8,7 +8,7 @@ class NetworkConnection(object):
     """Abstract base class representing a network connection."""
     
     def __init__(self, host, user, port):
-        raise NotImplementedError()
+        pass
     
     
     def connect(self, timeout, remote_shell):
