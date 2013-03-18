@@ -11,3 +11,5 @@ MANIFEST
 *.swp
 autobackup/test.py
 myconfig/
+*~
+*.kate-swp
