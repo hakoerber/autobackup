@@ -2,6 +2,7 @@
 .project
 .pydevproject
 *.pyc
+*.pyo
 self
 dist/
 build/
