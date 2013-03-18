@@ -1,7 +1,7 @@
 import datetime
 
-ranges = (range(60), range(24), range(1,32), range(1,13), range(1,8), 
-          range(1900,3000)) # Creating year 3000 problem
+ranges = (range(60), range(24), range(1,32), range(1,13), range(1900,3000),
+          range(1,8)) # Creating year 3000 problem
 
 class Cronjob(object):
     """
