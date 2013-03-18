@@ -9,6 +9,7 @@ class Cronjob(object):
     minute hour day month year weekday
     """
     def __init__(self, schedule_string):
+        self.cronstring = schedule_string
         self.schedule = _get_single_positions(schedule_string)
         for i in range(6):  
             self.schedule[i] = _parse_string_to_range(self.schedule[i], i)
@@ -24,11 +25,23 @@ class Cronjob(object):
     def has_occured_between(self, d1, d2):
         if not d1 <= d2:
             raise ValueError("d1 has to be older than or equal to d2.")
+        min_val = self.get_min_time()
+        max_val = self.get_max_time()
+        if d1 < min_val:
+            d1 = min_val
+        if d2 > max_val:
+            d2 = max_val
+        if d2 < min_val:
+            return False
+        if d1 > max_val:
+            return False
+        if (d1 < min_val and d2 < min_val) or (d1 > max_val and d2 > max_val):
+            return False
         most_recent_occurence = self.get_most_recent_occurence(d2)
         return most_recent_occurence >= d1
         
     def has_occured_since(self, d):
-        return has_occured_between(d, datetime.datetime.now())
+        return self.has_occured_between(d, datetime.datetime.now())
 
 
     def get_most_recent_occurence(self, d=None):
@@ -40,45 +53,76 @@ class Cronjob(object):
         # we go from the most significant to the least significant position,
         # from year to minute
         # for each position we compare the d_schedule value with all possible
-        # values in self.schedule
+        # values in self.schedule:
+        #
         # we choose the hightest value in self.schedule that is lower or equal
         # than the value of d_schedule
-        # if we choose a lower value that d_schedule, we have change the
+        #
+        # if we choose a lower value than d_schedule, we have change the
         # procedure: in all following lower significant positions, instead of
-        # comparing, we always choose the hightest value from self.schedule[i],
+        # comparing, we always choose the hightest value from self.schedule[i]
+        #
         # if we choose the equal value, we just continue with our procedure
-        # if we cannot choose a lower or equal value that means that d_schedule
-        # i older than every possible value of our self.schedule, so we abort
-        # with an error
+        #
+        # if we cannot choose a lower or equal value that means that there is no
+        # matching for the current i+1 position. so we have to choose the next 
+        # lower possible value for the i+1 position. if this is not possible,
+        # either because i+1 does not exist (we are currently at the year 
+        # position) or there already is the lowest possible value at position
+        # i+1, that means that d_schedule is older than every possible value in 
+        # self.schedule, so we raise an error
+        #
+        # this is shittier than everything, but it somehow passes the tests
         max_only_now = False
-        for i in range(4,-1,-1):  
-            lower_equal_range = [val for val in self.schedule[i] \
-                                 if val <= d_schedule[i]]
-
-            if len(lower_equal_range) == 0:
-                raise ValueError("d is older than every possible value in this "
-                                  "crontab")
-            
-            lower_equal_value = max(lower_equal_range)
-            is_equal_value = (lower_equal_value == d_schedule[i])
-            
-            
+        i = 5
+        while i > 0:
+            i -= 1
             if not max_only_now:
+                lower_equal_range = [val for val in self.schedule[i] \
+                                     if val <= d_schedule[i]]
+
+                if len(lower_equal_range) == 0:
+                    self._set_lower_value(latest_schedule, i)
+                    latest_schedule[i] = max(self.schedule[i])
+                    max_only_now = True
+                    continue
+                    
+                lower_equal_value = max(lower_equal_range)
+                is_equal_value = (lower_equal_value == d_schedule[i])
+                
                 latest_schedule[i] += lower_equal_value
             else:
                 latest_schedule[i] += max(self.schedule[i])
                 
             if not is_equal_value:
                 max_only_now = True
-        
+                    
         return _tuple_to_datetime(latest_schedule)
             
-        
             
+    def _set_lower_value(self, latest_schedule, i):
+        if i == 4:
+            raise ValueError("d is older than every possible value in "
+                             "this crontab")
+        # not using indices, as that would rely on self.schedule to
+        # be sorted
+        # lets revert to the last postion
+        i += 1
+        # lower it to the next possible value and continue
+        last_value = latest_schedule[i]
+        lower_values = [val for val in self.schedule[i] \
+                        if val < last_value]
+        if len(lower_values) == 0:
+            _set_lower_value(self, latest_schedule, i)
+        latest_schedule[i] = max(lower_values) 
             
-    def max_time(self):
-        return tuple([max(val) for val in self.schedule])
+    def get_max_time(self):
+        return _tuple_to_datetime([max(val) for val in self.schedule])
         
+    
+    def get_min_time(self):
+        return _tuple_to_datetime([min(val) for val in self.schedule])
+
        
 def _datetime_to_tuple(d):
     (d_year, d_month, d_day, d_hour, d_minute, _, d_weekday, _, _) = \
