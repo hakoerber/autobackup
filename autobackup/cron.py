@@ -127,6 +127,9 @@ def _set_lower_value(schedule, latest_schedule, i):
 def _datetime_to_tuple(d):
     (d_year, d_month, d_day, d_hour, d_minute, _, d_weekday, _, _) = \
         d.timetuple()    
+    # ATTENTION: timetuple's tm_wday is in range(0,6), but we need range(1,8)
+    # for our weekday attribute.
+    d_weekday += 1
     return (d_minute, d_hour, d_day, d_month, d_year, d_weekday)
     
     
