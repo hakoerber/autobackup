@@ -82,7 +82,7 @@ class Cronjob(object):
                                      if val <= d_schedule[i]]
 
                 if len(lower_equal_range) == 0:
-                    self._set_lower_value(latest_schedule, i)
+                    _set_lower_value(self.schedule, latest_schedule, i)
                     latest_schedule[i] = max(self.schedule[i])
                     max_only_now = True
                     continue
@@ -99,23 +99,6 @@ class Cronjob(object):
                     
         return _tuple_to_datetime(latest_schedule)
             
-            
-    def _set_lower_value(self, latest_schedule, i):
-        if i == 4:
-            raise ValueError("d is older than every possible value in "
-                             "this crontab")
-        # not using indices, as that would rely on self.schedule to
-        # be sorted
-        # lets revert to the last postion
-        i += 1
-        # lower it to the next possible value and continue
-        last_value = latest_schedule[i]
-        lower_values = [val for val in self.schedule[i] \
-                        if val < last_value]
-        if len(lower_values) == 0:
-            _set_lower_value(self, latest_schedule, i)
-        latest_schedule[i] = max(lower_values) 
-            
     def get_max_time(self):
         return _tuple_to_datetime([max(val) for val in self.schedule])
         
@@ -123,6 +106,23 @@ class Cronjob(object):
     def get_min_time(self):
         return _tuple_to_datetime([min(val) for val in self.schedule])
 
+       
+            
+def _set_lower_value(schedule, latest_schedule, i):
+    if i == 4:
+        raise ValueError("d is older than every possible value in "
+                         "this crontab")
+    # not using indices, as that would rely on self.schedule to
+    # be sorted
+    # lets revert to the last postion
+    i += 1
+    # lower it to the next possible value and continue
+    last_value = latest_schedule[i]
+    lower_values = [val for val in schedule[i] \
+                    if val < last_value]
+    if len(lower_values) == 0:
+        _set_lower_value(schedule, latest_schedule, i)
+    latest_schedule[i] = max(lower_values) 
        
 def _datetime_to_tuple(d):
     (d_year, d_month, d_day, d_hour, d_minute, _, d_weekday, _, _) = \
