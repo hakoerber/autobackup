@@ -59,7 +59,12 @@ class Device(object):
             mountpoint = self.mountpoint
         mountpoint.mount(self)
 
-    
+
+    def unmount(self):
+        if self.mountpoint is None:
+            return
+        if self.mountpoint.is_active():
+            self.mountpoint.unmount()
     
 class Mountpoint(object):
     """
