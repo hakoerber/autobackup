@@ -172,10 +172,13 @@ def func_directory_get_files(host, user, path):
     :rtype: tuple
     """
     args = ["ls", "-A", "-1", "-p", path]
-    (exit_code, stdoutdata, _) = execute(host, args, user)
+    (exit_code, stdoutdata, stderrdata) = execute(host, args, user)
     if exit_code != 0:
-        return None
-    return stdoutdata.split('\n')
+        raise Exception("Reading directory failed:\n " + stderrdata)
+    dirs = stdoutdata.split('\n')
+    if dirs[0] == "":
+        dirs = []
+    return dirs
 
 
 def func_create_directory(host, user, path, create_parents):
