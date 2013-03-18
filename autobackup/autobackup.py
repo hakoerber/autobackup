@@ -63,19 +63,19 @@ def main():
             
         devices[key] = device
         
-    # mapping: name -> (repo_location, source_locations[], cronjobs[], max_age,
+    # mapping: name -> (repo_location, source_locations[], cronjob, max_age,
     # max_count)
     backups = {}
     for key, value in config_structure["[backups]"].iteritems():
         repo_location = _parse_full_location(value["to"], hosts, devices)
         source_locations = [_parse_full_location(source_string, hosts, devices)
             for source_string in value["from"]]
-        cronjobs = [cron.Cronjob(cronstr) for 
+        cronjob = [cron.Cronjob(cronstr) for 
             cronstr in value["create_at"]]
 
         backups[key] = (repo_location,
                         source_locations,
-                        cronjobs,
+                        cronjob,
                         value["max_age"],
                         value["max_count"])
 
@@ -90,7 +90,7 @@ def main():
 
     # mount all these devices
     for repo_device in repo_devices:
-        repo_devices.mount()
+        repo_device.mount()
         
         
     # read backup repositories and handle their events
@@ -103,12 +103,12 @@ def main():
             path=repository_location.path)
         backup_repositories.append(
             backuprepository.BackupRepository(
-                    repository_location=repository_location,
-                    directories=directories,
-                    source_locations=backup[1],
-                    interval=cronjobs,
-                    max_age=backup[3],
-                    max_count=backup[4]))
+                repository_location=repository_location,
+                repository_directories=directories,
+                source_locations=backup[1],
+                cronjob=cronjob,
+                max_age=backup[3],
+                max_count=backup[4]))
                     
     manager = backuprepository.BackupManager(backup_repositories)
     manager.backup_required += _backup_required_handler

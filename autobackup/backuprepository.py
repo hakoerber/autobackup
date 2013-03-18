@@ -73,7 +73,7 @@ class BackupRepository(object):
     def __init__(self, 
                  repository_location, repository_directories,
                  source_locations,
-                 interval, max_count, max_age):
+                 cronjob, max_count, max_age):
         """
         :param sourceHost:
         The host of the source directories.
@@ -99,15 +99,15 @@ class BackupRepository(object):
         
         self.source_locations = source_locations        
         
-        self.interval = interval
+        self.cronjob = cronjob
         self.max_count = max_count
         self.max_age = max_age
         
         self.backup_required = event.Event()
         self.backup_expired = event.Event()
             
-        max_cout_age = max_count * interval
-        self.max_age = max_cout_age if max_cout_age > max_age else max_age
+        self.max_age = max_age
+        self.max_count = max_count
         
         self.backups = []
         for directory in self.source_locations:
@@ -115,34 +115,46 @@ class BackupRepository(object):
         
     
     def check_backups(self):
-        max_birth = datetime.datetime.now() - self.max_age
-        min_birth = datetime.datetime.now() - self.interval
+        # first we check with regard to max_age and max_count, which can only
+        # mark a backup as expired, and then in regard to the cronjob, which
+        # can make new backups necessary
         
-        backup_needed = True
+        while len(self.backups) > self.max_count:
+            self._on_backup_expired(self._get_oldest_backup().location)
         
+        now = datetime.datetime.now()
+        
+        max_birth = now - self.max_age
         for backup in self.backups:
             if backup.birth < max_birth:
                 self._on_backup_expired(backup.location)
-            if backup.birth >= min_birth:
-                backup_needed = False
                 
-        if backup_needed:
+        latest_backup_datetime = self._get_latest_backup().birth
+        latest_occurence = self.cronjob.get_most_recent_occurence(now)
+        if latest_backup_datetime < latest_occurence:
             self._on_backup_required(self.repository_location, 
                                      self.source_locations,
-                                     self._get_latest_backup)
+                                     self._get_latest_backup,
+                                     new_backup_dirname)
             
-    
             
     def _on_backup_required(self, repository_location, source_locations,
-                            latest_backup):
+                            latest_backup, new_backup_dirname):
         if len(self.backup_required):
             self.backup_required(repository_location, source_locations,
-                                 latest_backup)
+                                 latest_backup, new_backup_dirname)
+                                 
+            self.backups.append(Backup(os.path.join(
+                                                  self.repository_location.path, 
+                                                  new_backup_dirname)))
           
           
     def _on_backup_expired(self, location):
         if len(self.backup_expired):
             self.backup_expired(location)
+            del([backup for backup in self.backups \
+                        if backup.location == location][0])
+             
             
     def _get_latest_backup(self):
         if len(self.backups) == 0:
@@ -152,6 +164,15 @@ class BackupRepository(object):
             if backup.birth > latest.birth:
                 latest = backup
         return latest
+        
+    def _get_oldest_backup(self):
+        if len(self.backups) == 0:
+            return None
+        oldest = self.backups[0]
+        for backup in self.backups:
+            if backup.birth < oldest.birth:
+                oldest = backup
+        return oldest
             
     
     

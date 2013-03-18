@@ -34,6 +34,7 @@ def execute(host, args, user=None):
     host is not remote and user is not the current user.
     """
     if not host.is_localhost():
+        print "Connecting to ", host.ip
         # Connect to a remote host.
         if user == None:
             raise ValueError("A user must be specified for remote connection.")
@@ -53,7 +54,7 @@ def execute(host, args, user=None):
             raise ValueError("Cannot change the user on localhost.")
         process = subprocess.Popen(args, stdout=subprocess.PIPE, 
                                    stderr=subprocess.PIPE, bufsize=-1)
-        (stdoutdata, stderr) = process.comunicate()
+        (stdoutdata, stderrdata) = process.communicate()
         return (process.returncode, stdoutdata, stderrdata)    
     
 
