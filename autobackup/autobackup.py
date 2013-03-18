@@ -80,14 +80,19 @@ def main():
                         value["max_count"])
 
 
-    # mount the appropriate devices if they are devices where backup
-    # repositories are stored at
-    repo_mountpoints = []
+    # get all devices where backup repositories are stored at
+    repo_devices = []
     for backup in backups.itervalues():
         repo_location = backup[0]
         if repo_location.device is not None:
-            repo_location.device.mount()
-                        
+            repo_devices.append(repo_location.device)
+
+
+    # mount all these devices
+    for repo_device in repo_devices:
+        repo_devices.mount()
+        
+        
     # read backup repositories and handle their events
     backup_repositories = []
     for backup in backups.itervalues():
@@ -109,31 +114,45 @@ def main():
     manager.backup_required += _backup_required_handler
     manager.backup_expired  += _backup_expired_handler
 
+    # Now we have to handle all backups that were required or expired while the
+    # programm was not running
+    manager.check_all_backups()
+    
+    # Now let's start scheduling and waiting for events
+    manager.start_scheduling()
+
     # unmount the devices with backup repositories again
-    for mountpoint in repo_mountpoints:
-        mountpoint.unmount()
+    for repo_device in repo_devices:
+        repo_device.unmount()
 
-    # wait ...
-
-    # if backup needs to be created or deleted:
-    # mount appropriate devices if necessary
-    # create backup
-    # unmount devices
 
 def _backup_required_handler(repository_location, source_locations, 
                              latest_backup):
-    # We just need to copy the sources to the new directory.
+    # Mount the appropriate. devices if necessary ...
+    if repository_location.device != None:
+        repository_location.device.mount()
+    for source_location in source_locations:
+        if source_location.device != None:
+            source_location.device.mount()
+        
+    # Now we just need to copy the sources to the new directory.
     process.func_create_backup(source_locations, repository_location, 
                                latest_backup)
+    
+    # And unmount all devices again.          
+    if repository_location.device != None:
+        repository_location.device.unmount()
+    for source_location in source_locations:
+        if source_location.device != None:
+            source_location.device.unmount()
 
-
+                               
 def _backup_expired_handler(backup_location):
     process.func_remote_directory(
         host=backup_location.host, 
         path=backup_location.path,
         user=backup_location.user,
         recursive=False)#True # I am afraid.
-
 
 
 def _get_path_info(hosts, devices, path):
