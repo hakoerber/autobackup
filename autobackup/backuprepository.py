@@ -34,13 +34,20 @@ class BackupManager(object):
 
         self._scheduler = scheduler.Scheduler()
         self._scheduler.add_cron_job(self._minute_elapsed, minute='*')
-        self._scheduler.start()
         
         # Quite shitty, have to figure out how to assign the methods on a class
         # level without reordering the classes.
         self._on_backup_required = BackupRepository._on_backup_required    
         self._on_backup_expired = BackupRepository._on_backup_expired
 
+        
+    def start_scheduling(self):
+        self._scheduler.start()
+        
+    
+    def check_all_backups(self):
+        for backup_repository in self.backup_repositories:
+            backup_repository.check_backups
         
         
     def _minute_elapsed(self):
