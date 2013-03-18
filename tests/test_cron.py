@@ -6,7 +6,7 @@ import cron
 class Tests(unittest.TestCase):
     
     def setUp(self):
-        self.c1 = cron.Crontab("1 10-15 5 6,7,8,11 * 2012-2015")
+        self.c1 = cron.Cronjob("1 10-15 5 6,7,8,11 2012-2015 *")
 
     def test_matching(self):
         d_in_lo    = datetime.datetime(2012,  6,  5, 10,  1)
