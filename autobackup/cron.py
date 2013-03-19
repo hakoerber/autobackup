@@ -1,8 +1,26 @@
+# -*- encoding: utf-8 -*-
+# Copyright (c) 2013 Hannes Körber <hannes.koerber@gmail.com>
+#
+# This file is part of autobackup.
+#
+# autobackup is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# autobackup is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 """
 This module implements a cron scheduling flavor.
 """
-import datetime
 
+import datetime
 
 _ranges = (range(60), range(24), range(1, 32), range(1, 13),
            range(1900, 3000), range(1, 8))  # Creating year 3000 problem
@@ -124,7 +142,7 @@ class Cronjob(object):
         if date_time_1 > max_val:
             return False
         if ((date_time_1 < min_val and date_time_2 < min_val) or
-            (date_time_1 > max_val and date_time_2 > max_val)):
+                (date_time_1 > max_val and date_time_2 > max_val)):
             return False
         most_recent_occurence = self.get_most_recent_occurence(date_time_2)
         return most_recent_occurence >= date_time_1
