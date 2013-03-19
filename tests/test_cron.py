@@ -7,6 +7,7 @@ import cron
 class Tests(unittest.TestCase):
     
     def setUp(self):
+        
         self.c1 = cron.Cronjob("1 10-15 5 6,7,8,11 2012-2015 *")
 
         self.now = datetime.datetime.now()
@@ -50,12 +51,16 @@ class Tests(unittest.TestCase):
                            datetime.datetime(2023, 5, 24, 2, 54)] + \
                           self.d_out_hi + \
                           self.d_out_lo
+                          
+        self.d_all      = self.d_in_exact + self.d_out_lo + self.d_out_hi + \
+                          self.d_in_any + self.d_out_any + [self.now]
                            
 
         
     def test_matching(self):
         for d in self.d_in_exact:
-            self.assertTrue(self.c1.matches(d))     
+            self.assertTrue(self.c1.matches(d))
+     
         for d in self.d_out_any:
             self.assertFalse(self.c1.matches(d))
             
@@ -94,3 +99,8 @@ class Tests(unittest.TestCase):
             last = self.c1.get_most_recent_occurence(d2)
             self.assertEqual(self.c1.has_occured_between(d1, d2),
                              last >= d1)
+                             
+    def test_has_occured_between_identical_to_match_if_d1_equal_d2(self):
+        for d in self.d_all:
+            self.assertEqual(self.c1.has_occured_between(d, d),
+                             self.c1.matches(d))
