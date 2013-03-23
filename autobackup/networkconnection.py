@@ -28,6 +28,8 @@ import string
 import random
 import fcntl
 import os
+import pwd
+import getpass
 
 
 # in milliseconds
@@ -41,13 +43,12 @@ _EXECUTE_ID_LENGTH = 20
 class NetworkConnection(object):
     """Abstract base class representing a network connection."""
 
-    def __init__(self, host, user, port):
+    def __init__(self, host, local_user, remote_user, port):
         """Abstract class. Not implemented."""
 
     def connect(self, timeout, remote_shell):
         """Abstract class. Not implemented."""
         raise NotImplementedError()
-
 
     def disconnect(self):
         """Abstract class. Not implemented."""
@@ -66,20 +67,29 @@ class SSHNetworkConnection(NetworkConnection):
     """
     Implements NetworkConnection using the SSH protocol.
     """
-    def __init__(self, host, user, port):
+    def __init__(self, host, local_user, remote_user, port):
         """
         :param host: The host to connect to.
         :type host: Host instance
-        :param user: The user on the remote machine.
-        :type user: string
-        :param port: The prt to connect to on the remote host.
+        :param local_user: The user who shall own the ssh process.
+        :type local_user: string
+        :param remote_user: The user used to connect to the remote machine.
+        :type remote_user: string
+        :param port: The port to connect to on the remote host.
         :type port: int
         """
-        NetworkConnection.__init__(host, user, port)
+        NetworkConnection.__init__(host, local_user, remote_user, port)
 
         self.host = host
-        self.user = user
+        self.local_user = local_user
+        self.remote_user = remote_user
         self.port = port
+
+        if self.local_user != getpass.getuser():
+            # getpwnam returns a tuple: (name, passwd, uid, gid ...)
+            self.local_user_uid = pwd.getpwnam(local_user)[2]
+        else:
+            self.local_user_uid = None
 
         self._ssh_process = None
 
@@ -105,21 +115,30 @@ class SSHNetworkConnection(NetworkConnection):
 
         connection_id = generate_id(_CONNECT_ID_LENGTH)
 
+        # used to change the user in the Popen constructor below
+        # If user_uid is None, there is no need to change the user.
+        if self.local_user_uid is not None:
+            def preexec():
+                os.setuid(self.local_user_uid)
+        else:
+            preexec = None
+
         args = ["ssh",
                 "-o", "StrictHostKeyChecking=yes",
                 "-p", str(self.port),
                 "-q",
                 "-x",
-                "-l", self.user,
+                "-l", self.remote_user,
                 self.host.ip,
                 # Double quotes will automatically be added by
                 # subprocess.list2cmdline()
                 'echo {0} ; {1}'.format(connection_id, remote_shell)]
 
-        self._ssh_process = subprocess.Popen(args, shell=False, bufsize= -1,
+        self._ssh_process = subprocess.Popen(args, shell=False, bufsize=-1,
                                              stdout=subprocess.PIPE,
                                              stderr=subprocess.PIPE,
-                                             stdin=subprocess.PIPE)
+                                             stdin=subprocess.PIPE,
+                                             preexec_fn=preexec)
 
         max_polls = timeout / _CONNECT_POLL_INTERVAL
         poll = 0
