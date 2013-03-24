@@ -1,80 +1,151 @@
+# -*- encoding: utf-8 -*-
+# Copyright (c) 2013 Hannes Körber <hannes.koerber@gmail.com>
+#
+# This file is part of autobackup.
+#
+# autobackup is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# autobackup is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+"""
+Module to execute a command on a certain host. When you want to execute it on
+the localhost, it behaves like a wrapper around then subprocess.Popen()
+constructor to spawn a new process. If you want to execute a command on a remote
+machine, the module will built up a commection to that host through the
+connection class specified in _CONNECTION_CLASS and delegates the execution to
+that class.
+
+It also contains some functions to execute frequently needed processes, like
+creating/deleting a directory or testing whether a file exists.
+"""
+
 import getpass
+import os
+import pwd
 import subprocess
 
 import networkconnection
 
-CONNECTION = networkconnection.SSHNetworkConnection
-CONNECTION_PORT = 22
-CONNECTION_TIMEOUT = 10 * 1000
-CONNECTION_REMOTE_SHELL = "/bin/bash"
-COMMAND_TIMEOUT = 10 * 1000
 
-
+_CONNECTION_CLASS = networkconnection.SSHNetworkConnection
+_CONNECTION_PORT = 22
+_CONNECTION_TIMEOUT = 10 * 1000
+_CONNECTION_REMOTE_SHELL = "/bin/bash"
+_COMMAND_TIMEOUT = 10 * 1000
 _connections = []
 
-def execute(host, args, user=None):
+
+def execute(host, args, user, remote_user=None):
     """
-    Executes a command on a specific host as user. Will connect to the host and
-    maintain the connection if the host is remote until you explicitly  
+    Executes a command on a specific as a user. Will connect to the host and
+    maintain the connection if the host is remote until you explicitly
     disconnect to host with disconnect(). If the host is the localhost, the
     command will be executed locally.
     :param host: The host on which the command is to be executed.
     :type host: Host instance
-    :param user: The user as whom to run the command. If no user is given, the 
-    command will be executed as the current user. If you run the command on the 
-    localhost, the username must mach the current user, otherwise an exception 
-    will be raised.
-    :type user: User instance
     :param args: A list of arguments of the command.
     :type args: list
+    :param user: The user as whom to run the command on the local machine or
+    the local connection command if executing to a remote host.
+    :type user: string
+    :param remote_user: The username to use when connecting to a remote host.
+    If none is given, the same user as the local one will be used. If the
+    command is executed on the localhost, the parameter will be ignored.
+    :type remote_user: string
     :returns: A tuple which contains the exit code of the command, the whole
-    output to stdout and the whole output to stderr.
+    output to stdout and the whole output to stderr as strings.
     :rtype: tuple
-    :raises: ValueError when host is remote and no user is specified, or when
-    host is not remote and user is not the current user.
+    :raises: TimeoutError if connecting to or executing a command on a remote
+    host and a timeout occurs.
+    :raises: ConnectionRefusedError connecting to a remote host fails.
     """
     if not host.is_localhost():
-        print "Connecting to ", host.ip
-        # Connect to a remote host.
-        if user == None:
-            raise ValueError("A user must be specified for remote connection.")
-        connection = _get_connection(host, user)
-    
+        # Connect to a remote host
+        if remote_user is None:
+            remote_user = user
+        # see if connection already exists
+        connection = None
+        for conn in _connections:
+            if (conn.host == host and conn.local_user == user and
+                    conn.remote_user == remote_user):
+                connection = conn
+                break
+        if not connection:
+            connection = _CONNECTION_CLASS(host=host,
+                                           local_user=user,
+                                           remote_user=remote_user,
+                                           port=_CONNECTION_PORT)
+
         if not connection.is_connected():
-            connection.connect(CONNECTION_TIMEOUT, CONNECTION_REMOTE_SHELL)
-        
-            (exit_code, stdoutdata, stderrdata) = connection.execute(
-                                                     args, 
-                                                     COMMAND_TIMEOUT)
-    
+            try:
+                connection.connect(timeout=_CONNECTION_TIMEOUT,
+                                   remote_shell=_CONNECTION_REMOTE_SHELL)
+            except (TimeoutError, ConnectionRefusedError):
+                raise
+
+            try:
+                (exit_code, stdoutdata, stderrdata) = connection.execute(
+                    command=args, timeout=_COMMAND_TIMEOUT)
+            except TimeoutError:
+                raise
+
             return (exit_code, stdoutdata, stderrdata)
     else:
         # Just execute the command locally.
-        if user != getpass.getuser():
-            raise ValueError("Cannot change the user on localhost.")
-        process = subprocess.Popen(args, stdout=subprocess.PIPE, 
-                                   stderr=subprocess.PIPE, bufsize=-1)
-        (stdoutdata, stderrdata) = process.communicate()
-        return (process.returncode, stdoutdata, stderrdata)    
-    
 
-def disconnect(host, user=None):
+        # used to change the user in the Popen constructor below
+        if user != getpass.getuser():
+            # getpwnam returns a tuple: (name, passwd, uid, gid ...)
+            def preexec():
+                uid = pwd.getpwnam(user)[2]
+                os.setuid(uid)
+        else:
+            preexec = None
+
+        process = subprocess.Popen(args,
+                                   stdout=subprocess.PIPE,
+                                   stderr=subprocess.PIPE,
+                                   bufsize=-1,
+                                   preexec_fn=preexec)
+        (stdoutdata, stderrdata) = process.communicate()
+        return (process.returncode, stdoutdata, stderrdata)
+
+
+def disconnect(host, user=None, remote_user=None):
     """
-    Terminates all connections to a host as a specific user. If no user is 
-    given, all connection to the host will terminated.
+    Terminates all connections to a host as a specific user/remote_user. If no
+    user or remote_user is given, all connection to the host regardless of the
+    respective user/remote_user will terminated.
     :param host: The host to terminate connections to.
     :type host: Host instance
-    :param user: The remote username, if None, all connections to the host 
-    regardless of the remote username will be terminated.
+    :param user: The user who own the connection process.
     :type user: string
+    :param remote_user: The user who was given when connecting to the remote.
+    :type remote_user: string
+    :returns: True if any connections were disconnected, False otherwise.
+    :rtype: bool
+    host.
     """
+    any_disconnects = False
     for conn in _connections:
         if conn.host == host:
-            if user == None or user == conn.user:
+            if ((user is None or user == conn.local_user) and
+                    (remote_user is None or remote_user == conn.remote_user)):
                 conn.disconnect()
                 _connections.remove(conn)
-          
-                
+                any_disconnects = True
+    return any_disconnects
+
+
 def disconnect_all():
     """
     Disconnects all connections to all hosts.
@@ -83,135 +154,200 @@ def disconnect_all():
         conn.disconnect()
 
 
-def is_connected(host, user=None):
+def execute_success(host, args, user, remote_user=None):
     """
-    Determines whether there is an active connection to a host as a specific 
-    user. If no user is given, determines whether there is any connection to 
-    that host.
+    Executes a command and returns its output to stdout. If the command returns
+    a failure status (!= 0), raises a ProcessError.
+    :param host: The host on which the command is to be executed.
+    :type host: Host instance
+    :param args: A list of arguments of the command.
+    :type args: list
+    :param user: The user as whom to run the command on the local machine or
+    the local connection command if executing to a remote host.
+    :type user: string
+    :param remote_user: The username to use when connecting to a remote host.
+    If none is given, the same user as the local one will be used. If the
+    command is executed on the localhost, the parameter will be ignored.
+    :type remote_user: string
+    :returns: A tuple which contains the exit code of the command, the whole
+    output to stdout and the whole output to stderr as strings.
+    :rtype: tuple
+    :raises: TimeoutError if connecting to or executing a command on a remote
+    host and a timeout occurs.
+    :raises: ConnectionRefusedError connecting to a remote host fails.
+    :raises: ProcessError if the command exits with a failure status.
+    """
+    (exit_code, stdoutdata, stderrdata) = execute(host, args, user, remote_user)
+    if exit_code != 0:
+        raise ProcessError(exit_code, stdoutdata, stderrdata)
+    return stdoutdata
+
+
+def is_connected(host, user=None, remote_user=None):
+    """
+    Determines whether there is an active connection to a host as a specific
+    user/remote_user. If no user/remote_user is given, determines whether there
+    is any connection to that host, regardless of the respective
+    user/remote_user.
     :param host: The host to poll.
     :type host: Host instance
-    :param user: The remote username, if None, all connections regardless of 
-    username count as a connection to the host.
+    :param user: The user who owns the connection process.
     :type user: string
+    :param remote_user: The user that was specified when connecting to the host.
+    :type remote_user: string
     :returns: True if there is an active connection to the host as the specified
     user, False otherwise.
     :rtype: bool
     """
     for conn in _connections:
         if conn.host == host:
-            if user == None or user == conn.user:
+            if ((user is None or user == conn.local_user) and
+                    (remote_user is None or remote_user == conn.remote_user)):
                 return True
-    return False        
-    
-    
-def _get_connection(host, user):
-    connection = None
-    for conn in _connections:
-        if conn.host == host and conn.user == user:
-            connection = conn
-            break
-        
-    if not connection:
-        connection = CONNECTION(host, user, CONNECTION_PORT)
-        
-    return connection
+    return False
 
 
 class FileTypes(object):
+    """
+    An enumeration containing all file types usable for func_file_exists().
+    """
     ANY = "e"
     BLOCK_SPECIAL = "b"
     DIRECTORY = "d"
     REGULAR = "f"
 
 
-def func_file_exists(host, user, path, filetype):
+def func_file_exists(host, user, path, filetype, remote_user=None):
     """
     Function that tests whether a file exists and is or the given type.
     :param host: Host on which to execute the command.
     :type host: Host instance
-    :param user: User as whom to execute the command.
-    :type user: string    
+    :param user: The user as whom to run the command on the local machine or
+    the local connection command if executing to a remote host.
+    :type user: string
     :param path: The path of the file.
     :type path: string
     :param filetype: The type of the file.
     :type filetype: FileTypes enum member
+    :param remote_user: The username to use when connecting to a remote host.
+    If none is given, the same user as the local one will be used. If the
+    command is executed on the localhost, the parameter will be ignored.
+    :type remote_user: string
     :returns: True if the file file exists, false otherwise.
     :rtype: bool
+    :raises: TimeoutError if connecting to or executing a command on a remote
+    host and a timeout occurs.
+    :raises: ConnectionRefusedError connecting to a remote host fails.
     """
-    args = ["test", "-" + filetype , path]
-    (exit_code, _, _) = execute(host, args, user)
+    args = ["test", "-{}".format(filetype), path]
+    (exit_code, _, _) = execute(host, args, user, remote_user)
     return exit_code == 0
 
 
-def func_directory_empty(host, user, path):
+def func_directory_empty(host, user, path, remote_user=None):
     """
     Function that tests whether a given directory is empty.
-    :param host: Host on which to execute the command.  
+    :param host: Host on which to execute the command.
     :type host: Host instance
-    :param user: User as whom to execute the command.
-    :type user: string    
-    :param path: The path of the directory.
+    :param user: The user as whom to run the command on the local machine or
+    the local connection command if executing to a remote host.
+    :type user: string
+    :param path: The path of the direost,
     :type path: string
+    :param remote_user: The username to use when connecting to a remote host.
+    If none is given, the same user as the local one will be used. If the
+    command is executed on the localhost, the parameter will be ignored.
+    :type remote_user: string
     :returns: True if the directory is empty, false otherwise.
     :rtype: bool
+    :raises: TimeoutError if connecting to or executing a command on a remote
+    host and a timeout occurs.
+    :raises: ConnectionRefusedError connecting to a remote host fails.
+    :raises: ProcessError if reading the directory failed.
     """
-    return len(func_directory_get_files(host, user, path)) == 0
-    
-    
-def func_directory_get_files(host, user, path):
+    return len(func_directory_get_files(host, user, path, remote_user)) == 0
+
+
+def func_directory_get_files(host, user, path, remote_user=None):
     """
     Function that returns all elements of a directory.
     :param host: Host on which to execute the command.
     :type host: Host instance
-    :param user: User as whom to execute the command.
+    :param user: The user as whom to run the command on the local machine or
+    the local connection command if executing to a remote host.
     :type user: string
     :param path: The path of the directory.
     :type path: string
-    :returns: A tuple with the names of all files and subdirectory in the 
+    :param remote_user: The username to use when connecting to a remote host.
+    If none is given, the same user as the local one will be used. If the
+    command is executed on the localhost, the parameter will be ignored.
+    :type remote_user: string
+    :returns: A tuple with the names of all files and subdirectory in the
     directory. Directories can be identified by a succeeding slash.
     :rtype: tuple
+    :raises: TimeoutError if connecting to or executing a command on a remote
+    host and a timeout occurs.
+    :raises: ConnectionRefusedError connecting to a remote host fails.
+    :raises: ProcessError if reading the directory failed.
     """
     args = ["ls", "-A", "-1", "-p", path]
-    (exit_code, stdoutdata, stderrdata) = execute(host, args, user)
+    (exit_code, stdoutdata, stderrdata) = execute(host, args, user, remote_user)
     if exit_code != 0:
-        raise Exception("Reading directory failed:\n " + stderrdata)
+        raise ProcessError(exit_code, stdoutdata, stderrdata)
+    # TODO: pylint thinks that stdoutdata may be a list instead of a string,
+    # examine that lazy.
+    stdoutdata = str(stdoutdata)
     dirs = stdoutdata.split('\n')
     if dirs[0] == "":
         dirs = []
     return dirs
 
 
-def func_create_directory(host, user, path, create_parents):
+def func_create_directory(host, user, path, create_parents, remote_user=None):
     """
-    Function to create a directory. 
+    Function to create a directory.
     :param host: Host on which to execute the command.
     :type host: Host instance
-    :param user: User as whom to execute the command.
+    :param user: The user as whom to run the command on the local machine or
+    the local connection command if executing to a remote host.
     :type user: string
     :param path: The path of the new directory.
     :type path: string
+    :param remote_user: The username to use when connecting to a remote host.
+    If none is given, the same user as the local one will be used. If the
+    command is executed on the localhost, the parameter will be ignored.
+    :type remote_user: string
     :returns: A tuple with the exit code, the stdout data and stderr data
     :rtype: tuple
+    :raises: TimeoutError if connecting to or executing a command on a remote
+    host and a timeout occurs.
+    :raises: ConnectionRefusedError connecting to a remote host fails.
+    :raises: ProcessError if creating the directory failed.
     """
     args = ["mkdir"]
     if create_parents:
         args.append("-p")
     args.append(path)
-    return execute(host, args, user)
+    execute_success(host, args, user, remote_user)
 
 
-def func_remove_directory(host, user, path, recursive):
+def func_remove_directory(host, user, path, recursive, remote_user=None):
     """
     Function to remove a directory.
     :param host: Host on which to execute the command.
     :type host: Host instance
-    :param user: User as whom to execute the command.
+    :param user: The user as whom to run the command on the local machine or
+    the local connection command if executing to a remote host.
     :type user: string
     :param path: The path of the directory that shall be deleted.
     :type path: string
     :param recursive: Determines whether to delete the directory and all its
     content recursively.
     :type recursive: bool
+    :param remote_user: The username to use when connecting to a remote host.
+    If none is given, the same user as the local one will be used. If the
+    command is executed on the localhost, the parameter will be ignored.
+    :type remote_user: string
     :returns: A tuple with the exit code, the stdout data and stderr data.
     :rtype: tuple
     """
@@ -219,30 +355,13 @@ def func_remove_directory(host, user, path, recursive):
         args = ["rm", "--recursive"]
     else:
         args = ["rmdir", path]
-    return execute(host, args, user)
-    
-def func_create_backup(source_locations, target_location, hardlink_to):
-    if not target_location.is_localhost() and \
-            any([not loc.host.is_localhost() for loc in source_locations]):
-        raise Exception("Either source or location must be local.")     
-    args = ["rsync"]
-    if hardlink_to == None:
-        link_dest = ""
-    else:
-        link_dest = ("--link-dest", hardlink_to.path)        
-    args.extend(link_dest)
-    destination_string = target_location.get_ssh_string()
-    # We have to rsync every source location on their own, as all source args 
-    # for rsync must come from the same machine
-    # TODO determine host and user for execution
-    host = None
-    user = None
-    for source in source_locations:
-        source_string = source.get_ssh_string()
-        (exit_code, _, stderrdata) =\
-            execute(host, [args, source_string, destination_string], user)
-        if exit_code != 0:
-            print "Backup from {0} to {1} failed:\n{2}".format(
-                source_string, destination_string, stderrdata)
-        
-    
+    return execute_success(host, args, user, remote_user)
+
+
+class ProcessError(Exception):
+    """Exception raised when a process of this module fails."""
+    def __init__(self, exit_code, stdoutdata, stderrdata):
+        Exception.__init__(self)
+        self.exit_code = exit_code
+        self.stdoutdata = stdoutdata
+        self.stderrdata = stderrdata
