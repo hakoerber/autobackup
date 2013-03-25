@@ -52,6 +52,7 @@ class XMLParser(Parser):
     backups: list of backup
     backup: name -> (source[], destination, tag[])
     tag: name -> (cron, max_age, max_count)
+    source/destination: (user, host, path, device)
     """
     def __init__(self, path):
         """
@@ -96,8 +97,17 @@ class XMLParser(Parser):
         for backup in root.find("backups"):
             sources = []
             for source in backup.findall("source"):
-                sources.append(source.text)
-            destination = backup.find("destination").text
+                user = source.findtext("user")
+                host = _find_in(source.findtext("host"), hosts)
+                path = source.findtext("path")
+                device = _find_in(source.findtext("device"), devices)
+                sources.append((user, host, path, device))
+            destination = backup.find("destination")
+            user = destination.findtext("user")
+            host = _find_in(destination.findtext("host"), hosts)
+            path = destination.findtext("path")
+            device = _find_in(destination.findtext("device"), devices)
+            destination = (user, host, path, device)
             tags = []
             for tag in backup.findall("tag"):
                 name = tag.attrib["name"]
@@ -108,6 +118,14 @@ class XMLParser(Parser):
             backups.append((sources, destination, tags))
         self.structure = [hosts, devices, backups]
         return self.structure
+
+def _find_in(string, dictionary):
+    if string is not None and not string in dictionary:
+        raise ParseError(0,"","Not found.")
+    elif string is None:
+        return None
+    else:
+        return dictionary[string]
 
 
 class ParseError(Exception):
