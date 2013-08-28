@@ -23,7 +23,9 @@ This format is similar to XML, but not as flexible or powerful.
 
 import os
 import xml.etree.ElementTree as etree
+import getpass
 
+current_user = getpass.getuser()
 
 class Parser(object):
     """Abstract base class for all parsers in this module."""
@@ -46,13 +48,15 @@ class XMLParser(Parser):
     is valid, because it had to be validated against an xsd-file.
 
     The resulting structure is as follows:
-    structure: [hosts, devices, backups]
-    hosts: name -> (ip, hostname), one is of course None
-    devices: name -> (uuid, filesystem, mountpoint)
-    backups: list of backup
-    backup: name -> (source[], destination, tag[])
+    structure : [backups]
+    backups : backup[]
+    backup : name -> (source[], destination, tag[])
+    source/destination : (user, host, path, device)
+    user: string
+    host: name -> (ip, hostname) or None
+    path: string
+    device: name -> (uuid, filesystem, mountpoint) or None
     tag: name -> (cron, max_age, max_count)
-    source/destination: (user, host, path, device)
     """
     def __init__(self, path):
         """
@@ -240,3 +244,32 @@ class CfgParser(Parser):
 
     def get_structure(self):
         return self.structure
+
+    def _get_path_info(hosts, devices, path):
+        temp = []
+        rest = path
+        if ":" in rest:
+            temp.append(path.split(":")[0])
+            rest = rest.split(":")[1]
+        else:
+            temp.append(None)
+        if not "@" in rest:
+            temp.extend([rest, None])
+        else:
+            temp.extend([rest.split("@")[0], rest.split("@")[1]])
+        try:
+            temp[0] = devices['<' + temp[0] + '>'] if temp[0] else None
+        except KeyError as error:
+            print("Unknown device {}.".format(temp[0]))
+            sys.exit(1)
+        if temp[2]:
+            try:
+                temp[2] = hosts['<' + temp[2] + '>']
+            except KeyError as error:
+                print("Unknown host {}.".format(temp[2]))
+                sys.exit(1)
+        else:
+            temp[2] = host.get_localhost()
+
+        return temp
+

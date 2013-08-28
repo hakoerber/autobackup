@@ -1,79 +1,34 @@
 import datetime
 import os
 
-import apscheduler.scheduler as scheduler #@UnresolvedImport
 
 import event
+import cron
 
 SUFFIX     = 'bak'
-# Timeformat used by the datetime.strptime() method of 
+# Timeformat used by the datetime.strptime() method of
 TIMEFORMAT = '%Y-%m-%dT%H:%M:%S'
 FORMAT     = "{0}.{1}".format(TIMEFORMAT, SUFFIX)
 
-class BackupManager(object):
-    """
-    Represents a collection of backup repositories. Provides methods to poll
-    whether new backups are needed or old backups are expired. Can also poll
-    automatically in certain intervals.
-    """
-    
-    def __init__(self, backup_repositories):
-        """
-        :param backup_repositories: A list of BackupRepositories to manage.
-        :type backup_repositories: list of BackupRepository instances
-        """
-        self.backup_repositories = backup_repositories
-        
-        # We will just handle all events raised by the backup_repositories and
-        # re-raise them with the same information.
-        self.backup_required = event.Event()
-        self.backup_expired = event.Event()
-        for repository in backup_repositories:
-            repository.backup_required += self._backup_required_handler
-            repository.backup_expired  += self._backup_expired_handler
-
-        self._scheduler = scheduler.Scheduler()
-        self._scheduler.add_cron_job(self._minute_elapsed, minute='*')
-        
-        # Quite shitty, have to figure out how to assign the methods on a class
-        # level without reordering the classes.
-        self._on_backup_required = BackupRepository._on_backup_required    
-        self._on_backup_expired = BackupRepository._on_backup_expired
-
-        
-    def start_scheduling(self):
-        self._scheduler.start()
-        
-    
-    def check_all_backups(self):
-        for backup_repository in self.backup_repositories:
-            backup_repository.check_backups
-        
-        
-    def _minute_elapsed(self):
-        for repository in self.backup_repositories:
-            repository.check_backups()
-        
-        
-    def _backup_required_handler(self, *args):
-        self._on_backup_required(*args)
-    
-    def _backup_expired_handler(self, *args):
-        self._on_backup_expired(*args)
-
+class Tag(object):
+    def __init__(self, cron, max_age, max_count):
+        self.cron = cron
+        self.max_age = max_age
+        self.max_count = max_count
 
 
 class BackupRepository(object):
     """
-    Represents a backup repository, where a number of backups can be stored. 
-    Requires information about the expiration of backups and the interval in 
+    Represents a backup repository, where a number of backups can be stored.
+    Requires information about the expiration of backups and the interval in
     which backups are to be created. Will raise events accordingly.
     """
-    
-    def __init__(self, 
-                 repository_location, repository_directories,
+
+    def __init__(self,
                  source_locations,
-                 cronjob, max_count, max_age):
+                 repository_location,
+                 repository_directories,
+                 tags):
         """
         :param sourceHost:
         The host of the source directories.
@@ -86,106 +41,112 @@ class BackupRepository(object):
         :param directories:
         The subdirectories of the repository.
         :param interval:
-        An timedelta object describing the desired interval between two 
+        An timedelta object describing the desired interval between two
         backups.
         :param maxCount:
-        The maximum amount of backups to retain. If this number is exceeded, 
+        The maximum amount of backups to retain. If this number is exceeded,
         the oldest backups are to be deleted first.
         :param maxAge:
         The maximum age of all backups. Older backups are to be deleted.
         """
         self.repository_location = repository_location
         self.repository_directories = repository_directories
-        
-        self.source_locations = source_locations        
-        
-        self.cronjob = cronjob
-        self.max_count = max_count
-        self.max_age = max_age
-        
+
+        self.source_locations = source_locations
+
         self.backup_required = event.Event()
         self.backup_expired = event.Event()
-            
-        self.max_age = max_age
-        self.max_count = max_count
-        
-        self.backups = []
+
+        # tag-name -> backup[]
+        self.backups = {}
         for directory in self.source_locations:
-            self.backups.append(Backup(directory))
-        
-    
+            backup = Backup(directory, tags)
+            self.backups[backup.tag] = backup
+
+
     def check_backups(self):
-        # first we check with regard to max_age and max_count, which can only
-        # mark a backup as expired, and then in regard to the cronjob, which
-        # can make new backups necessary
-        
-        while len(self.backups) > self.max_count:
-            self._on_backup_expired(self._get_oldest_backup().location)
-        
         now = datetime.datetime.now()
-        
-        max_birth = now - self.max_age
-        for backup in self.backups:
-            if backup.birth < max_birth:
-                self._on_backup_expired(backup.location)
-                
-        latest_backup_datetime = self._get_latest_backup().birth
-        latest_occurence = self.cronjob.get_most_recent_occurence(now)
-        if latest_backup_datetime < latest_occurence:
-            self._on_backup_required(self.repository_location, 
-                                     self.source_locations,
-                                     self._get_latest_backup,
-                                     new_backup_dirname)
-            
-            
+        for tag in self.tags:
+            # "tag" looks like: cron, max_age, max_count
+            max_age = tag[1]
+            max_count = tag[2]
+            while len(self.backups[tag]) > max_count:
+                latest_backup = self._get_latest_backup(tag)
+                self._on_backup_expired(latest_backup)
+                del latest_backup
+            for backup in self.backups[tag]:
+                if backup.birth < max_age:
+                    self._on_backup_expired(backup.location)
+                    del backup
+            if tag[0].matches(now):
+                self._on_backup_required(self.repository_location,
+                                         self.source_locations,
+                                         self._get_latest_backup(),
+                                         tag)
+
+
+
+
     def _on_backup_required(self, repository_location, source_locations,
-                            latest_backup, new_backup_dirname):
+                            latest_backup, tag):
         if len(self.backup_required):
             self.backup_required(repository_location, source_locations,
                                  latest_backup, new_backup_dirname)
-                                 
+
             self.backups.append(Backup(os.path.join(
-                                                  self.repository_location.path, 
+                                                  self.repository_location.path,
                                                   new_backup_dirname)))
-          
-          
+
+
     def _on_backup_expired(self, location):
         if len(self.backup_expired):
             self.backup_expired(location)
             del([backup for backup in self.backups \
                         if backup.location == location][0])
-             
-            
-    def _get_latest_backup(self):
-        if len(self.backups) == 0:
+
+
+    def _get_latest_backup(self, tag=None):
+        if tag is None:
+            backups = []
+            for tag in self.backups:
+                backups.extend(self.backups[tag])
+        else:
+            backups = self.backups[tag]
+        if len(backups) == 0:
             return None
-        latest = self.backups[0]
-        for backup in self.backups:
+        latest = backups[0]
+        for backup in backups:
             if backup.birth > latest.birth:
                 latest = backup
         return latest
-        
-    def _get_oldest_backup(self):
-        if len(self.backups) == 0:
+
+    def _get_oldest_backup(self, tag):
+        if tag is None:
+            backups = []
+            for tag in self.backups:
+                backups.extend(self.backups[tag])
+        else:
+            backups = self.backups[tag]
+
+        if len(backups) == 0:
             return None
-        oldest = self.backups[0]
-        for backup in self.backups:
+        oldest = backups[0]
+        for backup in backups:
             if backup.birth < oldest.birth:
                 oldest = backup
         return oldest
-            
-    
-    
-class Backup(object):
-    
-    def __init__(self, location):
-        self.location = location
-        (self.birth,) = _parse_name(location.path)
 
+
+
+class Backup(object):
+
+    def __init__(self, dirname, tags):
+        self.dirname = dirname
+        self.tags = tags
+        (self.tag, self.birth) = _parse_name(location.path)
 
 def _parse_name(path):
-    if not path.endswith(".{}".format(SUFFIX)):
+    if not dirname.endswith(".{}".format(SUFFIX)):
         raise ValueError("Invalid extension.")
-    name = os.path.basename(path)
-    return (datetime.datetime.strptime(name.split('.')[0], TIMEFORMAT),)
-        
+    return ("taggy", datetime.datetime.strptime(dirname.split('.')[0], TIMEFORMAT))
+

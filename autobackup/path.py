@@ -3,8 +3,8 @@ class Location(object):
         self.user = user
         self.path = path
         self.host = host
-        
-        
+
+
     def get_ssh_string(self):
         if self.host.is_localhost():
             return self.path

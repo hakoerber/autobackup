@@ -10,12 +10,12 @@ class TestCases(unittest.TestCase):
 
     def test_unknown_hostname(self):
         self.assertRaises(ValueError, Host, hostname="unknownhostname")
-        
+
     def test_wrong_args(self):
         #self.assertRaises(ValueError, Host, ip=None, hostname=None)
         with self.assertRaises(ValueError):
             Host(ip=None, hostname=None)
-        
+
     def test_localhost(self):
         self.assertTrue(self.localhost_ip.is_localhost())
         self.assertTrue(self.localhost_hostname.is_localhost())

@@ -27,23 +27,23 @@ class Tests(unittest.TestCase):
     def test_wrong_time_format(self):
         self.assertRaises(ValueError,
                           backuprepository.Backup, path.FullLocation(
-                              None, None, 
+                              None, None,
                               "wrongformat1234.bak", None))
 
     def test_wrong_suffix(self):
-        self.assertRaises(ValueError, 
+        self.assertRaises(ValueError,
                           backuprepository.Backup, path.FullLocation(
-                              None, None, 
+                              None, None,
                               "2012-07-30T11:59:14.wrongsuffix", None))
-                          
-        self.assertRaises(ValueError, 
+
+        self.assertRaises(ValueError,
                           backuprepository.Backup, path.FullLocation(
-                              None, None, 
+                              None, None,
                               "2012-07-30T11:59:14bak", None))
 
     def test_wrong_dirname(self):
-        self.assertRaises(ValueError, 
-                          backuprepository.Backup, 
+        self.assertRaises(ValueError,
+                          backuprepository.Backup,
                           path.FullLocation(
-                              None, None, 
+                              None, None,
                               "error@wrong_in_every_way:fail", None))

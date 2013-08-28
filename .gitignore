@@ -13,3 +13,4 @@ autobackup/test.py
 myconfig/
 *~
 *.kate-swp
+documentation/thoughts.txt
