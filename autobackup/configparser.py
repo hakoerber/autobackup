@@ -57,6 +57,7 @@ class XMLParser(Parser):
     path: string
     device: name -> (uuid, filesystem, mountpoint) or None
     tag: name -> (cron, max_age, max_count)
+    source/destination: (user, host, path, device)
     """
     def __init__(self, path):
         """
